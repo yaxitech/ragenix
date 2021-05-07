@@ -1,0 +1,4 @@
+[toolchain]
+channel = "nightly-2021-04-25"
+components = [ "clippy-preview", "rls-preview", "rustfmt-preview", "rust-analysis", "rust-std", "rust-src", "rust-analyzer-preview" ]
+targets = [ ]

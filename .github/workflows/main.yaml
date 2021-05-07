@@ -1,0 +1,51 @@
+name: 'CI'
+
+on:
+  push:
+    branches:
+    - main
+  pull_request:
+    branches:
+    - main
+
+jobs:
+  check:
+    name: Checks
+    runs-on:
+      - self-hosted
+      - default
+      - kvm
+    env:
+      GC_DONT_GC: 1
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          # Nix Flakes doesn't work on shallow clones
+          fetch-depth: 0
+
+      - name: Run checks
+        run: |
+          nix flake check -L .
+
+  build:
+    name: Build
+    runs-on:
+      - self-hosted
+      - default
+    env:
+      GC_DONT_GC: 1
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          # Nix Flakes doesn't work on shallow clones
+          fetch-depth: 0
+
+      - name: Build ragenix
+        run: |
+          nix build -L .
+
+      - name: Run ragenix --help
+        run: |
+          ./result/bin/ragenix --help
