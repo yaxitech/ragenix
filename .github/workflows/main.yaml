@@ -1,51 +1,32 @@
-name: 'CI'
-
+name: CI
 on:
-  push:
-    branches:
-    - main
   pull_request:
     branches:
-    - main
-
+      - main
+  push:
+    branches:
+      - main
 jobs:
   check:
-    name: Checks
-    runs-on:
-      - self-hosted
-      - default
-      - kvm
     env:
       GC_DONT_GC: 1
+    name: 'Check and build'
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v2.3.4
+      - uses: cachix/install-nix-action@v13
         with:
-          # Nix Flakes doesn't work on shallow clones
-          fetch-depth: 0
-
-      - name: Run checks
-        run: |
-          nix flake check -L .
-
-  build:
-    name: Build
-    runs-on:
-      - self-hosted
-      - default
-    env:
-      GC_DONT_GC: 1
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-        with:
-          # Nix Flakes doesn't work on shallow clones
-          fetch-depth: 0
-
-      - name: Build ragenix
-        run: |
-          nix build -L .
-
-      - name: Run ragenix --help
-        run: |
-          ./result/bin/ragenix --help
+          install_url: https://nixos-nix-install-tests.cachix.org/serve/6l6zv3hfyqp402iax9jayd3i5qkmxx1f/install
+          install_options: '--tarball-url-prefix https://nixos-nix-install-tests.cachix.org/serve'
+          extra_nix_config: |
+            experimental-features = nix-command flakes recursive-nix
+            system-features = nixos-test benchmark big-parallel kvm recursive-nix
+      - name: 'Check flake evaluates'
+        run: nix flake check --no-build .
+      - name: 'Run checks'
+        run: nix flake check -L .
+      - name: 'Build package'
+        run: nix build -L .
