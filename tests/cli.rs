@@ -294,7 +294,7 @@ fn rejects_invalid_rules() -> Result<()> {
         .assert();
 
     assert.failure().stderr(indoc! {r#"
-            error: Invalid value for '--rules <RULES>': './secrets.nix' is invalid:
+            error: secrets rules are invalid: './secrets.nix'
              - /wurzel: "pfropf" is not of type "object"
         "#});
 

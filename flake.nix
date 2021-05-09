@@ -50,6 +50,7 @@
 
             nativeBuildInputs = with pkgs; [
               pkg-config
+              installShellFiles
             ];
 
             requiredSystemFeatures = pkgs.lib.optionals (!pkgs.stdenv.isDarwin) [ "recursive-nix" ];
@@ -71,10 +72,14 @@
               ''cargo fmt -- --check''
             ];
 
-            # Provide a symlink from `agenix` to `ragenix` for compat
             overrideMain = _: {
               postInstall = ''
+                # Provide a symlink from `agenix` to `ragenix` for compat
                 ln -sr "$out/bin/ragenix" "$out/bin/agenix"
+
+                installShellCompletion --bash target/release/build/ragenix-*/out/ragenix.bash
+                installShellCompletion --zsh  target/release/build/ragenix-*/out/_ragenix
+                installShellCompletion --fish target/release/build/ragenix-*/out/ragenix.fish
               '';
             };
           };
