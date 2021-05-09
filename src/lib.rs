@@ -1,9 +1,10 @@
+mod cli;
+
 use age::{
     armor::{ArmoredReader, ArmoredWriter, Format},
     cli_common::file_io,
     decryptor::RecipientsDecryptor,
 };
-use clap::{crate_authors, crate_description, crate_name, crate_version, App, Arg, ArgGroup};
 use color_eyre::{
     eyre::{eyre, Result, WrapErr},
     Help, SectionExt,
@@ -19,117 +20,6 @@ use std::{
     process,
 };
 use tempfile::NamedTempFile;
-
-#[derive(Debug)]
-struct Opts {
-    pub edit: Option<String>,
-    pub editor: Option<String>,
-    pub identities: Option<Vec<String>>,
-    pub rekey: bool,
-    pub rules: String,
-    pub schema: bool,
-    pub verbose: bool,
-}
-
-/// Parse the command line arguments using Clap
-fn parse_args<I, T>(itr: I) -> Opts
-where
-    I: IntoIterator<Item = T>,
-    T: Into<OsString> + Clone,
-{
-    let app = App::new(crate_name!())
-        .version(crate_version!())
-        .author(crate_authors!())
-        .about(crate_description!())
-        .arg(
-            Arg::with_name("edit")
-                .help("edits the age-encrypted FILE using $EDITOR")
-                .long("edit")
-                .short("e")
-                .takes_value(true)
-                .value_name("FILE")
-                .requires("editor"),
-        )
-        .arg(
-            Arg::with_name("rekey")
-                .help("re-encrypts all secrets with specified recipients")
-                .long("rekey")
-                .short("r")
-                .takes_value(false),
-        )
-        .arg(
-            Arg::with_name("identity")
-                .help("private key to use when decrypting")
-                .long("identity")
-                .short("i")
-                .takes_value(true)
-                .value_name("PRIVATE_KEY")
-                .required(false)
-                .multiple(true),
-        )
-        .arg(
-            Arg::with_name("verbose")
-                .help("verbose output")
-                .long("verbose")
-                .short("v")
-                .takes_value(false),
-        )
-        .arg(
-            Arg::with_name("schema")
-                .help("Prints the JSON schema Agenix rules have to conform to")
-                .long("schema")
-                .short("s")
-                .takes_value(false),
-        )
-        .group(
-            ArgGroup::with_name("action")
-                .args(&["edit", "rekey", "schema"])
-                .required(true),
-        )
-        .arg(
-            Arg::with_name("editor")
-                .help("editor to use when editing FILE")
-                .long("editor")
-                .takes_value(true)
-                .env("EDITOR")
-                .value_name("EDITOR"),
-        )
-        .arg(
-            Arg::with_name("rules")
-                .help("path to Nix file specifying recipient public keys")
-                .long("rules")
-                .takes_value(true)
-                .env("RULES")
-                .value_name("RULES")
-                .required_unless_one(&["schema"])
-                .default_value("./secrets.nix")
-                .default_value_if("schema", None, "/")
-                .validator(|arg| {
-                    if arg == "/" {
-                        Ok(())
-                    } else {
-                        validate_rules_file(arg).map_err(|report| report.to_string())
-                    }
-                }),
-        );
-
-    let matches = app.get_matches_from(itr);
-
-    Opts {
-        edit: matches.value_of("edit").map(str::to_string),
-        editor: matches.value_of("editor").map(str::to_string),
-        identities: matches
-            .values_of("identity")
-            .map(|vals| vals.map(str::to_string).collect::<Vec<_>>()),
-        rekey: matches.is_present("rekey"),
-        rules: matches
-            .value_of("rules")
-            .expect("Should never happen")
-            .to_string(),
-        schema: matches.is_present("schema"),
-        verbose: matches.is_present("verbose"),
-    }
-}
 
 static AGENIX_JSON_SCHEMA: &str = std::include_str!("agenix.schema.json");
 
@@ -154,15 +44,11 @@ fn validate_rules_file<P: AsRef<Path>>(path: P) -> Result<()> {
     let result = compiled.validate(&instance);
 
     if let Err(errors) = result {
-        let mut error_msgs: Vec<String> = Vec::new();
-        error_msgs.push(format!(
-            "'{}' is invalid:",
-            &path.as_ref().to_string_lossy()
-        ));
-        for error in errors {
-            error_msgs.push(format!(" - {}: {}", error.instance_path, error));
-        }
-        let error_msg = error_msgs.join("\n");
+        let error_msg = errors
+            .into_iter()
+            .map(|err| format!(" - {}: {}", err.instance_path, err))
+            .collect::<Vec<String>>()
+            .join("\n");
         Err(eyre!(error_msg))
     } else {
         Ok(())
@@ -171,7 +57,6 @@ fn validate_rules_file<P: AsRef<Path>>(path: P) -> Result<()> {
 
 /// Validate and parse the given rules file path
 fn parse_rules<P: AsRef<Path>>(rules_path: P) -> Result<Vec<RagenixRule>> {
-    validate_rules_file(&rules_path)?;
     let instance = nix_rules_to_json(&rules_path)?;
 
     // It's fine to force unwrap here as we validated the JSON schema
@@ -578,17 +463,26 @@ fn rekey_entry(entry: &RagenixRule, identities: &[Box<dyn age::Identity>]) -> Re
 /// to the passed writer
 #[allow(clippy::missing_errors_doc)]
 #[allow(clippy::missing_panics_doc)]
-pub fn run<I, T>(itr: I, mut writer: impl Write) -> Result<()>
+pub fn run<I, T>(itr: I, mut writer: impl Write, mut writer_err: impl Write) -> Result<()>
 where
     I: IntoIterator<Item = T>,
     T: Into<OsString> + Clone,
 {
-    let opts = parse_args(itr);
+    let opts = cli::parse_args(itr);
 
     if opts.schema {
         write!(writer, "{}", AGENIX_JSON_SCHEMA)?;
     } else {
-        let rules = parse_rules(&opts.rules).unwrap();
+        if let Err(report) = validate_rules_file(&opts.rules) {
+            writeln!(
+                writer_err,
+                "error: secrets rules are invalid: '{}'\n{}",
+                &opts.rules, report
+            )?;
+            process::exit(1);
+        }
+
+        let rules = parse_rules(&opts.rules)?;
         if opts.verbose {
             writeln!(writer, "{:#?}", rules)?;
         }
