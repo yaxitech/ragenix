@@ -55,7 +55,9 @@ fn validate_rules_file<P: AsRef<Path>>(path: P) -> Result<()> {
     }
 }
 
-/// Validate and parse the given rules file path
+/// Parse the given rules file path.
+///
+/// This method assumes that the passed file adheres to the [`AGENIX_JSON_SCHEMA`].
 fn parse_rules<P: AsRef<Path>>(rules_path: P) -> Result<Vec<RagenixRule>> {
     let instance = nix_rules_to_json(&rules_path)?;
 
