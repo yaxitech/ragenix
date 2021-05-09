@@ -40,6 +40,8 @@ The flake also exposes a NixOS module which is passed through from the `agenix` 
   https://github.com/ryantm/agenix#tutorial) or take a look at the files in the [`example`](./example) directory
   of this repository.
 
+The `ragenix` package also provides shell completions for `bash`, `zsh`, and `fish`. Make sure to install the package with either `nix profile github:yaxitech/ragenix`, `environment.systemPackages` on NixOS or `home.packages` for home-manager.
+
 ## Contributions
 
 We'd love to see PRs from you! Please consider the following guidelines:
