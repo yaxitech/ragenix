@@ -21,7 +21,7 @@ jobs:
             experimental-features = nix-command flakes
 
       - name: Update flakes
-        run: nix flake update --recreate-lock-file
+        run: nix flake update
 
       - name: Create Pull Request
         id: cpr
