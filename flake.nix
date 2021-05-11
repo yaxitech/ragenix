@@ -35,6 +35,11 @@
 
       eachDefaultSystem = flake-utils.lib.eachDefaultSystem;
       eachLinuxSystem = flake-utils.lib.eachSystem (lib.filter (lib.hasSuffix "-linux") flake-utils.lib.defaultSystems);
+
+      pkgsFor = system: import nixpkgs {
+        inherit system;
+        overlays = [ rust-overlay.overlay self.overlay ];
+      };
     in
     recursiveMerge [
       #
@@ -42,10 +47,7 @@
       #
       (eachDefaultSystem (system:
         let
-          pkgs = import nixpkgs {
-            inherit system;
-            overlays = [ rust-overlay.overlay self.overlay ];
-          };
+          pkgs = pkgsFor system;
 
           rust = pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain;
 
@@ -238,6 +240,12 @@
               )
             '';
           };
+
+        # Passthrough of the agenix integration test
+        checks.agenix-integration = import (agenix + "/test/integration.nix") {
+          inherit nixpkgs system;
+          pkgs = pkgsFor system;
+        };
       })
       )
       #
