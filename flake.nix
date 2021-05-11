@@ -24,12 +24,25 @@
   };
 
   outputs = { self, nixpkgs, flake-utils, rust-overlay, naersk, agenix }:
-    flake-utils.lib.eachDefaultSystem
-      (system:
-        let
-          cargoTOML = builtins.fromTOML (builtins.readFile ./Cargo.toml);
-          name = cargoTOML.package.name;
+    let
+      cargoTOML = builtins.fromTOML (builtins.readFile ./Cargo.toml);
+      name = cargoTOML.package.name;
 
+      lib = import (nixpkgs + "/lib");
+
+      # Recursively merge a list of attribute sets. Following elements take
+      # precedence over previous elements if they have conflicting keys.
+      recursiveMerge = with lib; foldl recursiveUpdate { };
+
+      eachDefaultSystem = flake-utils.lib.eachDefaultSystem;
+      eachLinuxSystem = flake-utils.lib.eachSystem (lib.filter (lib.hasSuffix "-linux") flake-utils.lib.defaultSystems);
+    in
+    recursiveMerge [
+      #
+      # COMMON OUTPUTS FOR ALL SYSTEMS
+      #
+      (eachDefaultSystem (system:
+        let
           pkgs = import nixpkgs {
             inherit system;
             overlays = [ rust-overlay.overlay self.overlay ];
@@ -53,7 +66,7 @@
               installShellFiles
             ];
 
-            requiredSystemFeatures = pkgs.lib.optionals (!pkgs.stdenv.isDarwin) [ "recursive-nix" ];
+            requiredSystemFeatures = lib.optionals (!pkgs.stdenv.isDarwin) [ "recursive-nix" ];
 
             buildInputs = with pkgs; [
               openssl
@@ -100,7 +113,7 @@
           checks.rekey = pkgs.runCommand "run-rekey"
             {
               buildInputs = [ pkgs.nixFlakes ];
-              requiredSystemFeatures = pkgs.lib.optionals (!pkgs.stdenv.isDarwin) [ "recursive-nix" ];
+              requiredSystemFeatures = lib.optionals (!pkgs.stdenv.isDarwin) [ "recursive-nix" ];
             }
             ''
               set -euo pipefail
@@ -160,55 +173,6 @@
             mkdir $out
           '';
 
-          checks.nixos-module =
-            let
-              pythonTest = import (nixpkgs + "/nixos/lib/testing-python.nix") { inherit system; };
-              secretsConfig = import ./example/secrets-configuration.nix;
-              ageSshKeysConfig = { lib, ... }: {
-                # XXX: This is insecure and copies your private key plaintext to the Nix store
-                #      NEVER DO THIS IN YOUR CONFIG!
-                age.sshKeyPaths = lib.mkForce [
-                  ./example/keys/id_ed25519
-                ];
-              };
-              nullDrv = pkgs.runCommand "null-drv" { } ''
-                echo 'Skipping. This test requires Linux. Make sure to run it on NixOS.'
-                mkdir "$out"
-              '';
-              secretPath = "/run/secrets/github-runner.token";
-            in
-            if pkgs.stdenv.isLinux then
-              (with pythonTest; makeTest {
-                nodes = {
-                  client = { ... }: {
-                    imports = [
-                      self.nixosModules.age
-                      secretsConfig
-                      ageSshKeysConfig
-                    ];
-                    nixpkgs.overlays = [ self.overlay ];
-                  };
-                };
-
-                testScript = ''
-                  start_all()
-                  client.wait_for_unit("multi-user.target")
-                  client.succeed('test -e "${secretPath}"')
-                  client.succeed(
-                      '[[ "$(cat "${secretPath}")" == "wurzelpfropf!" ]] || exit 1'
-                  )
-                  client.succeed(
-                      '[[ "$(stat -c "%a" "${secretPath}")" == "400"  ]] || exit 1'
-                  )
-                  client.succeed(
-                      '[[ "$(stat -c "%U" "${secretPath}")" == "root" ]] || exit 1'
-                  )
-                  client.succeed(
-                      '[[ "$(stat -c "%G" "${secretPath}")" == "root" ]] || exit 1'
-                  )
-                '';
-              }) else nullDrv;
-
           # `nix develop`
           devShell = pkgs.mkShell {
             name = "${name}-dev-shell";
@@ -227,15 +191,68 @@
             '';
           };
         })
-    //
-    {
-      # Passthrough the agenix NixOS module
-      inherit (agenix) nixosModules;
+      )
+      #
+      # CHECKS SPECIFIC TO LINUX SYSTEMS
+      #
+      (eachLinuxSystem (system: {
+        checks.nixos-module =
+          let
+            pythonTest = import (nixpkgs + "/nixos/lib/testing-python.nix") { system = "x86_64-linux"; };
+            secretsConfig = import ./example/secrets-configuration.nix;
+            ageSshKeysConfig = { lib, ... }: {
+              # XXX: This is insecure and copies your private key plaintext to the Nix store
+              #      NEVER DO THIS IN YOUR CONFIG!
+              age.sshKeyPaths = lib.mkForce [
+                ./example/keys/id_ed25519
+              ];
+            };
+            secretPath = "/run/secrets/github-runner.token";
+          in
+          with pythonTest; makeTest {
+            nodes = {
+              client = { ... }: {
+                imports = [
+                  self.nixosModules.age
+                  secretsConfig
+                  ageSshKeysConfig
+                ];
+                nixpkgs.overlays = [ self.overlay ];
+              };
+            };
 
-      # Overlay to add ragenix and replace agenix
-      overlay = final: prev: rec {
-        ragenix = self.packages.${prev.system}.ragenix;
-        agenix = ragenix;
-      };
-    };
+            testScript = ''
+              start_all()
+              client.wait_for_unit("multi-user.target")
+              client.succeed('test -e "${secretPath}"')
+              client.succeed(
+                  '[[ "$(cat "${secretPath}")" == "wurzelpfropf!" ]] || exit 1'
+              )
+              client.succeed(
+                  '[[ "$(stat -c "%a" "${secretPath}")" == "400"  ]] || exit 1'
+              )
+              client.succeed(
+                  '[[ "$(stat -c "%U" "${secretPath}")" == "root" ]] || exit 1'
+              )
+              client.succeed(
+                  '[[ "$(stat -c "%G" "${secretPath}")" == "root" ]] || exit 1'
+              )
+            '';
+          };
+      })
+      )
+      #
+      # SYSTEM-INDEPENDENT OUTPUTS
+      #
+      {
+        # Passthrough the agenix NixOS module
+        inherit (agenix) nixosModules;
+
+        # Overlay to add ragenix and replace agenix
+        overlay = final: prev: rec {
+          ragenix = self.packages.${prev.system}.ragenix;
+          agenix = ragenix;
+        };
+      }
+    ];
 }
