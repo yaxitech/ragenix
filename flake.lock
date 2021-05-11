@@ -2,19 +2,16 @@
   "nodes": {
     "agenix": {
       "inputs": {
-        "flake-utils": [
-          "flake-utils"
-        ],
         "nixpkgs": [
           "nixpkgs"
         ]
       },
       "locked": {
-        "lastModified": 1620185304,
-        "narHash": "sha256-c71N9svHwrvs/sAx0V2Y11aCmqjg1+FCjZYEBSAxams=",
+        "lastModified": 1620668778,
+        "narHash": "sha256-Rp0jdlW4n1dLHsf6om3F8++lRBjzO6zNIeOYCrFK86c=",
         "owner": "ryantm",
         "repo": "agenix",
-        "rev": "204bd95d30d30d0651f1e2e85f53d67b7308955f",
+        "rev": "c27b6334a21384fd55cc6087630e2233ab7a0226",
         "type": "github"
       },
       "original": {
