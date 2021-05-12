@@ -15,7 +15,11 @@ fn main() -> Result<()> {
 
 /// Run the program by parsing the command line arguments and writing
 /// to the passed writer
-pub(crate) fn ragenix<I, T>(itr: I, mut writer: impl Write, mut writer_err: impl Write) -> Result<()>
+pub(crate) fn ragenix<I, T>(
+    itr: I,
+    mut writer: impl Write,
+    mut writer_err: impl Write,
+) -> Result<()>
 where
     I: IntoIterator<Item = T>,
     T: Into<OsString> + Clone,

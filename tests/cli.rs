@@ -272,7 +272,7 @@ fn prints_schema() -> Result<()> {
     let mut cmd = Command::cargo_bin(crate_name!())?;
     let assert = cmd.arg("--schema").assert();
 
-    let schema = include_str!("../src/agenix.schema.json");
+    let schema = include_str!("../src/ragenix/agenix.schema.json");
     assert.success().stdout(schema);
 
     Ok(())
