@@ -1,18 +1,18 @@
 mod age;
 mod cli;
+mod util;
 
 use color_eyre::{
     eyre::{eyre, Result, WrapErr},
     Help, SectionExt,
 };
 use jsonschema::JSONSchema;
-use sha2::{Digest, Sha256};
 use std::{
     ffi::OsString,
     fs,
-    io::{self, Write},
+    io::Write,
     os::unix::prelude::PermissionsExt,
-    path::{Component, Path, PathBuf},
+    path::{Path, PathBuf},
     process,
 };
 
@@ -113,13 +113,13 @@ fn edit(
         age::decrypt(output_path, &input_path, &identities)?;
 
         // Calculate hash before editing
-        let pre_edit_hash = sha256(&input_path)?;
+        let pre_edit_hash = util::sha256(&input_path)?;
 
         // Prompt user to edit file
         editor_hook(&input_path, &editor)?;
 
         // Calculate hash after editing
-        let post_edit_hash = sha256(&input_path)?;
+        let post_edit_hash = util::sha256(&input_path)?;
 
         // Return if the file wasn't changed when editing
         if pre_edit_hash == post_edit_hash {
@@ -138,54 +138,6 @@ fn edit(
     age::encrypt(input_path, output_path.clone(), &entry.public_keys)?;
 
     Ok(())
-}
-
-/// Normalize a path, removing things like `.` and `..`.
-///
-/// CAUTION: This does not resolve symlinks (unlike
-/// [`std::fs::canonicalize`]). This may cause incorrect or surprising
-/// behavior at times. This should be used carefully. Unfortunately,
-/// [`std::fs::canonicalize`] can be hard to use correctly, since it can often
-/// fail, or on Windows returns annoying device paths. This is a problem Cargo
-/// needs to improve on.
-///
-/// [Copied from Cargo (ASL 2.0 / MIT)](
-/// https://github.com/rust-lang/cargo/blob/58a961314437258065e23cb6316dfc121d96fb71/crates/cargo-util/src/paths.rs#L81-L106)
-#[allow(clippy::option_if_let_else)]
-#[allow(clippy::cloned_instead_of_copied)]
-fn normalize_path(path: &Path) -> PathBuf {
-    let mut components = path.components().peekable();
-    let mut ret = if let Some(c @ Component::Prefix(..)) = components.peek().cloned() {
-        components.next();
-        PathBuf::from(c.as_os_str())
-    } else {
-        PathBuf::new()
-    };
-
-    for component in components {
-        match component {
-            Component::Prefix(..) => unreachable!(),
-            Component::RootDir => {
-                ret.push(component.as_os_str());
-            }
-            Component::CurDir => {}
-            Component::ParentDir => {
-                ret.pop();
-            }
-            Component::Normal(c) => {
-                ret.push(c);
-            }
-        }
-    }
-    ret
-}
-
-/// Hash a file using SHA-256
-fn sha256<P: AsRef<Path>>(path: P) -> Result<Vec<u8>> {
-    let mut file = fs::File::open(path)?;
-    let mut hasher = Sha256::new();
-    io::copy(&mut file, &mut hasher)?;
-    Ok(hasher.finalize().to_vec())
 }
 
 /// Reads the rules file using Nix to output the attribute set as a JSON string.
@@ -215,76 +167,12 @@ fn nix_rules_to_json<P: AsRef<Path>>(path: P) -> Result<serde_json::Value> {
     Ok(val)
 }
 
-/// Split editor into binary and (shell) arguments
-fn split_editor(editor: &str) -> Result<(String, Option<Vec<String>>)> {
-    let mut splitted: Vec<String> = shlex::split(editor)
-        .ok_or_else(|| eyre!("Could not parse editor"))?
-        .iter()
-        .map(String::from)
-        .collect();
-
-    if splitted.is_empty() {
-        Err(eyre!("Editor is empty"))
-    } else {
-        let binary = splitted.first().unwrap().clone();
-        let args = if splitted.len() >= 2 {
-            Some(splitted.split_off(1))
-        } else {
-            None
-        };
-        Ok((binary, args))
-    }
-}
-
-#[cfg(test)]
-mod test_split_editor {
-    use super::*;
-
-    #[test]
-    fn parse_editor_no_args() -> Result<()> {
-        let actual = split_editor("vim")?;
-        let expected = (String::from("vim"), None);
-        assert_eq!(actual, expected);
-        Ok(())
-    }
-
-    #[test]
-    fn parse_editor_one_arg() -> Result<()> {
-        let actual = split_editor("vim -R")?;
-        let expected = (String::from("vim"), Some(vec![String::from("-R")]));
-        assert_eq!(actual, expected);
-        Ok(())
-    }
-
-    #[test]
-    fn parse_editor_complex_1() -> Result<()> {
-        let actual = split_editor(r#"sed -i "s/.*/ x  /""#)?;
-        let expected = (
-            String::from("sed"),
-            Some(vec![String::from("-i"), String::from("s/.*/ x  /")]),
-        );
-        assert_eq!(actual, expected);
-        Ok(())
-    }
-
-    #[test]
-    fn parse_editor_complex_2() -> Result<()> {
-        let actual = split_editor(r#"sed -i 's/.*/ x  /'"#)?;
-        let expected = (
-            String::from("sed"),
-            Some(vec![String::from("-i"), String::from("s/.*/ x  /")]),
-        );
-        assert_eq!(actual, expected);
-        Ok(())
-    }
-}
-
 /// Open a file for editing.
 ///
 /// [Copied from cole-h/agenix-rs (ASL 2.0 / MIT)](
 /// https://github.com/cole-h/agenix-rs/blob/8e0554179f1ac692fb865c256e9d7fb91b6a692d/src/cli.rs#L236-L257)
 fn editor_hook(path: &Path, editor: &str) -> Result<()> {
-    let (editor, args) = split_editor(editor)?;
+    let (editor, args) = util::split_editor(editor)?;
 
     let cmd = process::Command::new(&editor)
         .args(args.unwrap_or_else(Vec::new))
@@ -339,7 +227,7 @@ where
         let identities = opts.identities.unwrap_or_default();
 
         if let Some(path) = &opts.edit {
-            let path_normalized = normalize_path(Path::new(path));
+            let path_normalized = util::normalize_path(Path::new(path));
             let edit_path = std::env::current_dir()
                 .and_then(fs::canonicalize)
                 .map(|p| p.join(path_normalized))?;
