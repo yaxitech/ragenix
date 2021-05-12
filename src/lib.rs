@@ -1,10 +1,6 @@
+mod age;
 mod cli;
 
-use age::{
-    armor::{ArmoredReader, ArmoredWriter, Format},
-    cli_common::file_io,
-    decryptor::RecipientsDecryptor,
-};
 use color_eyre::{
     eyre::{eyre, Result, WrapErr},
     Help, SectionExt,
@@ -14,12 +10,11 @@ use sha2::{Digest, Sha256};
 use std::{
     ffi::OsString,
     fs,
-    io::{self, BufReader, Write},
+    io::{self, Write},
     os::unix::prelude::PermissionsExt,
     path::{Component, Path, PathBuf},
     process,
 };
-use tempfile::NamedTempFile;
 
 static AGENIX_JSON_SCHEMA: &str = std::include_str!("agenix.schema.json");
 
@@ -84,17 +79,15 @@ fn parse_rules<P: AsRef<Path>>(rules_path: P) -> Result<Vec<RagenixRule>> {
 
 /// Rekey all entries with the specified public keys
 fn rekey(entries: &[RagenixRule], identities: &[String], mut writer: impl Write) -> Result<()> {
-    let identities = get_identities(identities)?;
-    for entry in entries.iter() {
-        let p = entry.path.to_string_lossy();
+    let identities = age::get_identities(identities)?;
+    for entry in entries {
         if entry.path.exists() {
-            writeln!(writer, "Rekeying {}", p)?;
-            rekey_entry(entry, &identities)?;
+            writeln!(writer, "Rekeying {}", entry.path.display())?;
+            age::rekey(&entry.path, &identities, &entry.public_keys)?;
         } else {
-            writeln!(writer, "Does not exist, ignored: {}", p)?;
+            writeln!(writer, "Does not exist, ignored: {}", entry.path.display())?;
         }
     }
-
     Ok(())
 }
 
@@ -111,13 +104,13 @@ fn edit(
     fs::set_permissions(&dir, PermissionsExt::from_mode(0o700))?;
 
     let input_path = dir.path().join("input");
+    let output_path = &entry.path;
 
-    if entry.path.exists() {
+    if output_path.exists() {
         // If the file already exists, first decrypt it, hash it, open it in `editor`,
         // hash the result, and if the hashes are equal, return.
-
-        let identities = get_identities(identity_paths)?;
-        decrypt(&entry.path, &input_path, &identities)?;
+        let identities = age::get_identities(identity_paths)?;
+        age::decrypt(output_path, &input_path, &identities)?;
 
         // Calculate hash before editing
         let pre_edit_hash = sha256(&input_path)?;
@@ -133,7 +126,7 @@ fn edit(
             writeln!(
                 writer,
                 "{} wasn't changed, skipping re-encryption.",
-                entry.path.to_string_lossy()
+                output_path.display()
             )?;
             return Ok(());
         }
@@ -142,30 +135,7 @@ fn edit(
         editor_hook(&input_path, &editor)?;
     }
 
-    let mut input = file_io::InputReader::new(input_path.to_str().map(str::to_string))?;
-
-    // Create an output to the user-requested location.
-    let output = file_io::OutputWriter::new(
-        entry.path.to_str().map(str::to_string),
-        file_io::OutputFormat::Text,
-        0o644,
-    )?;
-
-    let mut recipients: Vec<Box<dyn age::Recipient>> = vec![];
-    for pubkey in &entry.public_keys {
-        parse_recipient(&pubkey, &mut recipients)?;
-    }
-    let encryptor = age::Encryptor::with_recipients(recipients);
-
-    let mut output = encryptor
-        .wrap_output(
-            ArmoredWriter::wrap_output(output, Format::AsciiArmor)
-                .wrap_err("Failed to wrap output with age::ArmoredWriter")?,
-        )
-        .map_err(|err| eyre!(err))?;
-
-    io::copy(&mut input, &mut output)?;
-    output.finish().and_then(ArmoredWriter::finish)?;
+    age::encrypt(input_path, output_path.clone(), &entry.public_keys)?;
 
     Ok(())
 }
@@ -218,38 +188,6 @@ fn sha256<P: AsRef<Path>>(path: P) -> Result<Vec<u8>> {
     Ok(hasher.finalize().to_vec())
 }
 
-/// Returns the file paths to `$HOME/.ssh/{id_rsa,id_ed25519}` if each exists
-fn get_default_identity_paths() -> Result<Vec<String>> {
-    let home_path = home::home_dir().ok_or_else(|| eyre!("Could not determine home directory"))?;
-    let ssh_dir = home_path.join(".ssh");
-
-    let id_rsa = ssh_dir.join("id_rsa");
-    let id_ed25519 = ssh_dir.join("id_ed25519");
-
-    let filtered_paths = [id_rsa, id_ed25519]
-        .iter()
-        .filter(|x| x.exists())
-        .filter_map(|x| x.to_str())
-        .map(std::string::ToString::to_string)
-        .collect();
-
-    Ok(filtered_paths)
-}
-
-/// Get all the identities from the given paths and the default locations
-fn get_identities(identity_paths: &[String]) -> Result<Vec<Box<dyn age::Identity>>> {
-    let mut identities: Vec<String> = identity_paths.to_vec();
-    let mut default_identities = get_default_identity_paths()?;
-
-    identities.append(&mut default_identities);
-
-    if identities.is_empty() {
-        Err(eyre!("No usable identity or identities"))
-    } else {
-        age::cli_common::read_identities(identities, |s| eyre!(s), |s, e| eyre!("{}: {:?}", s, e))
-    }
-}
-
 /// Reads the rules file using Nix to output the attribute set as a JSON string.
 /// Return value is parsed into a serde JSON value.
 fn nix_rules_to_json<P: AsRef<Path>>(path: P) -> Result<serde_json::Value> {
@@ -275,58 +213,6 @@ fn nix_rules_to_json<P: AsRef<Path>>(path: P) -> Result<serde_json::Value> {
 
     let val = serde_json::from_slice(&output.stdout)?;
     Ok(val)
-}
-
-fn get_age_decryptor<P: AsRef<Path>>(
-    path: P,
-) -> Result<RecipientsDecryptor<ArmoredReader<BufReader<file_io::InputReader>>>> {
-    let s = path.as_ref().to_str().map(std::string::ToString::to_string);
-    let input_reader = file_io::InputReader::new(s)?;
-    let decryptor = age::Decryptor::new(ArmoredReader::new(input_reader))?;
-
-    match decryptor {
-        age::Decryptor::Passphrase(_) => {
-            Err(eyre!(String::from("Agenix does not support passphrases")))
-        }
-        age::Decryptor::Recipients(decryptor) => Ok(decryptor),
-    }
-}
-
-fn decrypt<P: AsRef<Path>>(
-    input_file: P,
-    output_file: P,
-    identities: &[Box<dyn age::Identity>],
-) -> Result<()> {
-    let decryptor = get_age_decryptor(input_file)?;
-    decryptor
-        .decrypt(identities.iter().map(|i| i.as_ref() as &dyn age::Identity))
-        .map_err(|e| e.into())
-        .and_then(|mut plaintext_reader| {
-            let output = output_file
-                .as_ref()
-                .to_str()
-                .map(std::string::ToString::to_string);
-            let mut ciphertext_writer =
-                file_io::OutputWriter::new(output, file_io::OutputFormat::Unknown, 0o600)?;
-            io::copy(&mut plaintext_reader, &mut ciphertext_writer)?;
-            Ok(())
-        })
-}
-
-/// Parses a recipient from a string.
-/// [Copied from str4d/rage (ASL-2.0)](
-/// https://github.com/str4d/rage/blob/85c0788dc511f1410b4c1811be6b8904d91f85db/rage/src/bin/rage/main.rs)
-fn parse_recipient(s: &str, recipients: &mut Vec<Box<dyn age::Recipient>>) -> Result<()> {
-    if let Ok(pk) = s.parse::<age::x25519::Recipient>() {
-        recipients.push(Box::new(pk));
-        Ok(())
-    } else if let Some(pk) = { s.parse::<age::ssh::Recipient>().ok().map(Box::new) } {
-        recipients.push(pk);
-        Ok(())
-    } else {
-        Err(eyre!("Invalid recipient: {}", s))
-            .with_suggestion(|| "Make sure you use an ssh-ed25519, ssh-rsa or an X25519 public key")
-    }
 }
 
 /// Split editor into binary and (shell) arguments
@@ -420,45 +306,6 @@ fn editor_hook(path: &Path, editor: &str) -> Result<()> {
     }
 
     Ok(())
-}
-
-/// Re-encrypt a file in memory.
-///
-/// Decrypts the [`entry`]'s file and stream-encrypts the contents into a temporary
-/// file. Afterward, the temporary file replaces the file at the input path.
-///
-/// Plaintext is never written to persistent storage but only processed in memory.
-fn rekey_entry(entry: &RagenixRule, identities: &[Box<dyn age::Identity>]) -> Result<()> {
-    let decryptor = get_age_decryptor(&entry.path)?;
-    decryptor
-        .decrypt(identities.iter().map(|i| i.as_ref() as &dyn age::Identity))
-        .map_err(|e| e.into())
-        .and_then(|mut plaintext_reader| {
-            // Create a temporary file to write the re-encrypted data to
-            let outfile = NamedTempFile::new()?;
-
-            // Create an encryptor for the (new) recipients to encrypt the file for
-            let mut recipients: Vec<Box<dyn age::Recipient>> = vec![];
-            for pubkey in &entry.public_keys {
-                parse_recipient(&pubkey, &mut recipients)?;
-            }
-            let encryptor = age::Encryptor::with_recipients(recipients);
-            let mut ciphertext_writer = encryptor
-                .wrap_output(
-                    ArmoredWriter::wrap_output(&outfile, Format::AsciiArmor)
-                        .wrap_err("Failed to wrap output with age::ArmoredWriter")?,
-                )
-                .map_err(|err| eyre!(err))?;
-
-            // Do the re-encryption
-            io::copy(&mut plaintext_reader, &mut ciphertext_writer)?;
-            ciphertext_writer.finish().and_then(ArmoredWriter::finish)?;
-
-            // Re-encrpytion is done, now replace the original file
-            fs::copy(outfile, &entry.path)?;
-
-            Ok(())
-        })
 }
 
 /// Run the program by parsing the command line arguments and writing
