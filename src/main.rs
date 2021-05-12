@@ -1,7 +1,5 @@
-use std::env;
-
 use color_eyre::eyre::{eyre, Result};
-use std::{ffi::OsString, fs, io::Write, path::Path, process};
+use std::{env, fs, path::Path, process};
 
 mod age;
 mod cli;
@@ -10,37 +8,22 @@ mod util;
 
 fn main() -> Result<()> {
     color_eyre::install()?;
-    ragenix(env::args(), &mut std::io::stdout(), &mut std::io::stderr())
-}
-
-/// Run the program by parsing the command line arguments and writing
-/// to the passed writer
-pub(crate) fn ragenix<I, T>(
-    itr: I,
-    mut writer: impl Write,
-    mut writer_err: impl Write,
-) -> Result<()>
-where
-    I: IntoIterator<Item = T>,
-    T: Into<OsString> + Clone,
-{
-    let opts = cli::parse_args(itr);
+    let opts = cli::parse_args(env::args());
 
     if opts.schema {
-        write!(writer, "{}", ragenix::AGENIX_JSON_SCHEMA)?;
+        print!("{}", ragenix::AGENIX_JSON_SCHEMA);
     } else {
         if let Err(report) = ragenix::validate_rules_file(&opts.rules) {
-            writeln!(
-                writer_err,
+            eprintln!(
                 "error: secrets rules are invalid: '{}'\n{}",
                 &opts.rules, report
-            )?;
+            );
             process::exit(1);
         }
 
         let rules = ragenix::parse_rules(&opts.rules)?;
         if opts.verbose {
-            writeln!(writer, "{:#?}", rules)?;
+            println!("{:#?}", rules);
         }
 
         let identities = opts.identities.unwrap_or_default();
@@ -57,9 +40,9 @@ where
 
             // `EDITOR`/`--editor` is mandatory if action is `--edit`
             let editor = &opts.editor.unwrap();
-            ragenix::edit(&rule, &identities, editor, &mut writer)?;
+            ragenix::edit(&rule, &identities, editor, &mut std::io::stdout())?;
         } else if opts.rekey {
-            ragenix::rekey(&rules, &identities, &mut writer)?;
+            ragenix::rekey(&rules, &identities, &mut std::io::stdout())?;
         }
     }
 

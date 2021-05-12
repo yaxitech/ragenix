@@ -5,7 +5,7 @@ use clap::{
 };
 
 #[derive(Debug, Clone)]
-pub struct Opts {
+pub(crate) struct Opts {
     pub edit: Option<String>,
     pub editor: Option<String>,
     pub identities: Option<Vec<String>>,
@@ -90,7 +90,8 @@ fn build() -> App<'static> {
 }
 
 /// Parse the command line arguments using Clap
-pub fn parse_args<I, T>(itr: I) -> Opts
+#[allow(dead_code)] // WTF?
+pub(crate) fn parse_args<I, T>(itr: I) -> Opts
 where
     I: IntoIterator<Item = T>,
     T: Into<OsString> + Clone,
