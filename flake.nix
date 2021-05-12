@@ -134,7 +134,7 @@
           checks.schema = pkgs.runCommand "emit-schema" { } ''
             set -euo pipefail
             ${pkgs.ragenix}/bin/ragenix --schema > "$TMPDIR/agenix.schema.json"
-            ${pkgs.diffutils}/bin/diff '${./src/agenix.schema.json}' "$TMPDIR/agenix.schema.json"
+            ${pkgs.diffutils}/bin/diff '${./src/ragenix/agenix.schema.json}' "$TMPDIR/agenix.schema.json"
             echo "Schema matches"
             mkdir "$out"
           '';
