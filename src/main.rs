@@ -4,5 +4,5 @@ use color_eyre::eyre::Result;
 
 fn main() -> Result<()> {
     color_eyre::install()?;
-    ragenix::run(env::args(), &mut std::io::stdout(), &mut std::io::stderr())
+    ragenix::agenix(env::args(), &mut std::io::stdout(), &mut std::io::stderr())
 }
