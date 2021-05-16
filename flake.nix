@@ -240,12 +240,6 @@
               )
             '';
           };
-
-        # Passthrough of the agenix integration test
-        checks.agenix-integration = import (agenix + "/test/integration.nix") {
-          inherit nixpkgs system;
-          pkgs = pkgsFor system;
-        };
       })
       )
       #
