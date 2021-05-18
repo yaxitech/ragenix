@@ -68,10 +68,10 @@ On NixOS, you can put the following snippet into your `configuration.nix`:
 
 ## Similar projects / acknowledgements 
 
-The [`agenix-rs`](https://github.com/cole-h/agenix-rs) project is quite similar to ragenix. In fact, it
+The [`agenix-cli`](https://github.com/cole-h/agenix-cli) project is quite similar to ragenix. In fact, it
 served as an inspiration (thanks!). Both projects have in common that they aim
 at replacing the fragile shell script with a version written in Rust. In contrast to `ragenix`, however,
-`agenix-rs` is not compatible to the original `agenix`. It uses a TOML configuration file to declare rules
+`agenix-cli` is not compatible to the original `agenix`. It uses a TOML configuration file to declare rules
 on a repository level (similar to `.sops.yaml`). While having a global rules file might be
 useful for some (particularly if you're looking to switch from [`sops-nix`](
 https://github.com/Mic92/sops-nix)), we wanted to continue to define our rules using Nix expressions which
