@@ -13,7 +13,7 @@
       inputs.flake-utils.follows = "flake-utils";
     };
     naersk = {
-      url = "github:nmattia/naersk";
+      url = "github:yaxitech/naersk/aarch64-darwin";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     agenix = {
@@ -32,8 +32,8 @@
       # Recursively merge a list of attribute sets. Following elements take
       # precedence over previous elements if they have conflicting keys.
       recursiveMerge = with lib; foldl recursiveUpdate { };
-
-      eachDefaultSystem = flake-utils.lib.eachDefaultSystem;
+      defaultSystems = flake-utils.lib.defaultSystems ++ [ "aarch64-darwin" ];
+      eachDefaultSystem = flake-utils.lib.eachSystem (defaultSystems);
       eachLinuxSystem = flake-utils.lib.eachSystem (lib.filter (lib.hasSuffix "-linux") flake-utils.lib.defaultSystems);
 
       pkgsFor = system: import nixpkgs {
