@@ -35,7 +35,7 @@ The flake also exposes a NixOS module which is passed through from the `agenix` 
 * `ragenix` opens a file for editing using `$EDITOR`. Again, you may use `--editor` instead of the
   environment variable.
 * Prior to editing/rekeying, `ragenix` verifies the validity of the rules file using [this JSON schema](
-  ./src/agenix.schema.json). The schema is also available to third party applications with
+  ./src/ragenix/agenix.schema.json). The schema is also available to third party applications with
   the `--schema` command line switch. For an example rules file, please refer to the [`agenix` README](
   https://github.com/ryantm/agenix#tutorial) or take a look at the files in the [`example`](./example) directory
   of this repository.
