@@ -181,7 +181,7 @@
           devShell = pkgs.mkShell {
             name = "${name}-dev-shell";
 
-            nativeBuildInputs = [ rust pkgs.pkg-config pkgs.openssl ];
+            nativeBuildInputs = [ rust ] ++ (with pkgs; [ pkg-config openssl rust-analyzer ]);
 
             buildInputs = with pkgs; lib.optionals stdenv.isDarwin [
               libiconv
