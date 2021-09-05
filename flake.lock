@@ -42,16 +42,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1625764329,
-        "narHash": "sha256-fD7BGYOevNg0WjFErDg6U4ykAyp1NNW5i2FmcQojiVA=",
+        "lastModified": 1631004655,
+        "narHash": "sha256-J1yeJk6Gud9ef2pEf6aKQemrfg1pVngYDSh+SAY94xk=",
         "owner": "yaxitech",
         "repo": "naersk",
-        "rev": "373da7b239ed0a6e0f78db00039a70ba5119b434",
+        "rev": "a0607ce2973483ab7b2ac145f6a298c0ef96f71d",
         "type": "github"
       },
       "original": {
         "owner": "yaxitech",
-        "ref": "aarch64-darwin",
+        "ref": "rust-stable",
         "repo": "naersk",
         "type": "github"
       }
