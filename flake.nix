@@ -84,7 +84,7 @@
 
             cargoTestCommands = x: x ++ [
               # clippy
-              ''cargo clippy --all --all-features --tests -- -D clippy::pedantic''
+              ''cargo clippy --all --all-features --tests -- -D clippy::pedantic -D warnings''
               # rustfmt
               ''cargo fmt -- --check''
             ];
