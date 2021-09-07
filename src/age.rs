@@ -159,7 +159,7 @@ pub(crate) fn rekey<P: AsRef<Path>>(
 ) -> Result<()> {
     let mut recipients: Vec<Box<dyn age::Recipient>> = vec![];
     for pubkey in public_keys {
-        parse_recipient(&pubkey, &mut recipients)?;
+        parse_recipient(pubkey, &mut recipients)?;
     }
     let decryptor = get_age_decryptor(&file)?;
     decryptor
