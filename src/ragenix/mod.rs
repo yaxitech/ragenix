@@ -173,7 +173,7 @@ pub(crate) fn edit(
         let pre_edit_hash = util::sha256(&input_path)?;
 
         // Prompt user to edit file
-        editor_hook(&input_path, &editor)?;
+        editor_hook(&input_path, editor)?;
 
         // Calculate hash after editing
         let post_edit_hash = util::sha256(&input_path)?;
@@ -189,7 +189,7 @@ pub(crate) fn edit(
         }
     } else {
         fs::File::create(&input_path)?;
-        editor_hook(&input_path, &editor)?;
+        editor_hook(&input_path, editor)?;
     }
 
     age::encrypt(input_path, output_path.clone(), &entry.public_keys)?;

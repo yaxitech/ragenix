@@ -1,5 +1,5 @@
 [toolchain]
 profile = "minimal"
-channel = "nightly-2021-07-01"
-components = [ "clippy-preview", "rls-preview", "rustfmt-preview", "rust-analysis", "rust-std", "rust-src", "rust-analyzer-preview" ]
+channel = "stable"
+components = [ "rust-src", "clippy-preview", "rustfmt-preview" ]
 targets = [ ]

@@ -13,7 +13,10 @@
       inputs.flake-utils.follows = "flake-utils";
     };
     naersk = {
-      url = "github:yaxitech/naersk/aarch64-darwin";
+      # Fork with PRs
+      # - 182: "Add support for aarch64-darwin"
+      # - 191: "Don't rely on unstable flags"
+      url = "github:yaxitech/naersk/rust-stable";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     agenix = {
@@ -81,7 +84,7 @@
 
             cargoTestCommands = x: x ++ [
               # clippy
-              ''cargo clippy --all --all-features --tests -- -D clippy::pedantic''
+              ''cargo clippy --all --all-features --tests -- -D clippy::pedantic -D warnings''
               # rustfmt
               ''cargo fmt -- --check''
             ];
@@ -178,7 +181,7 @@
           devShell = pkgs.mkShell {
             name = "${name}-dev-shell";
 
-            nativeBuildInputs = [ rust pkgs.pkg-config pkgs.openssl ];
+            nativeBuildInputs = [ rust ] ++ (with pkgs; [ pkg-config openssl rust-analyzer ]);
 
             buildInputs = with pkgs; lib.optionals stdenv.isDarwin [
               libiconv
