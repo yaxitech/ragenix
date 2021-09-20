@@ -4,9 +4,9 @@ use color_eyre::{
 };
 use jsonschema::JSONSchema;
 use std::{
-    fs,
-    io::Write,
-    os::unix::prelude::PermissionsExt,
+    fs::{self, OpenOptions},
+    io::{self, Write},
+    os::unix::prelude::{OpenOptionsExt, PermissionsExt},
     path::{Path, PathBuf},
     process,
 };
@@ -47,23 +47,34 @@ fn nix_rules_to_json<P: AsRef<Path>>(path: P) -> Result<serde_json::Value> {
 fn editor_hook(path: &Path, editor: &str) -> Result<()> {
     let (editor, args) = util::split_editor(editor)?;
 
-    let cmd = process::Command::new(&editor)
-        .args(args.unwrap_or_else(Vec::new))
-        .arg(path)
-        .stdin(process::Stdio::inherit())
-        .stdout(process::Stdio::inherit())
-        .stderr(process::Stdio::piped())
-        .output()
-        .wrap_err_with(|| format!("Failed to spawn editor '{}'", &editor))?;
+    if editor == "-" && args.is_none() {
+        let mut src = io::stdin();
+        let mut dst = OpenOptions::new()
+            .mode(0o600)
+            .create(true)
+            .truncate(true)
+            .write(true)
+            .open(path)?;
+        io::copy(&mut src, &mut dst)?;
+    } else {
+        let cmd = process::Command::new(&editor)
+            .args(args.unwrap_or_else(Vec::new))
+            .arg(path)
+            .stdin(process::Stdio::inherit())
+            .stdout(process::Stdio::inherit())
+            .stderr(process::Stdio::piped())
+            .output()
+            .wrap_err_with(|| format!("Failed to spawn editor '{}'", &editor))?;
 
-    if !cmd.status.success() {
-        let stderr = String::from_utf8_lossy(&cmd.stderr);
+        if !cmd.status.success() {
+            let stderr = String::from_utf8_lossy(&cmd.stderr);
 
-        return Err(eyre!(
-            "Editor '{}' exited with non-zero status code",
-            &editor
-        ))
-        .with_section(|| stderr.trim().to_string().header("Stderr:"));
+            return Err(eyre!(
+                "Editor '{}' exited with non-zero status code",
+                &editor
+            ))
+            .with_section(|| stderr.trim().to_string().header("Stderr:"));
+        }
     }
 
     Ok(())

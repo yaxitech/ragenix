@@ -104,6 +104,59 @@ fn edit_new_entry() -> Result<()> {
 }
 
 #[test]
+fn edit_new_entry_stdin() -> Result<()> {
+    // # created: 2021-09-20T23:41:59+02:00
+    // # public key: age1fjc9tyguvxfqh2ey2qqfc066g3gee7hlnhqn2g7yn4f6smymmsnq6xdn2t
+    // AGE-SECRET-KEY-1C744H5LMUVHGVLX8HXAWA9ENXXXJ6R6F89V5AGEDXXD8GECQ624QQUXKHX
+    let plaintext = "secret wurzelpfropf";
+
+    let dir = tempfile::tempdir()?;
+    let rules = indoc! {r#"
+    {
+        "pandora.age".publicKeys = [ 
+            "age1fjc9tyguvxfqh2ey2qqfc066g3gee7hlnhqn2g7yn4f6smymmsnq6xdn2t"
+        ];
+    }
+    "#};
+    fs::write(dir.path().join("secrets.nix"), rules)?;
+
+    let stdin_path = dir.path().join("stdin");
+    fs::write(&stdin_path, plaintext)?;
+
+    let mut cmd = Command::cargo_bin(crate_name!())?;
+    let assert = cmd
+        .current_dir(&dir.path())
+        .arg("--edit")
+        .arg("pandora.age")
+        .env("EDITOR", "-")
+        .pipe_stdin(stdin_path)?
+        .assert();
+
+    assert.success().stdout("");
+
+    // Verify the plaintext of the encrypted file
+    let privkey_path = dir.path().join("key.txt");
+    fs::write(
+        &privkey_path,
+        "AGE-SECRET-KEY-1C744H5LMUVHGVLX8HXAWA9ENXXXJ6R6F89V5AGEDXXD8GECQ624QQUXKHX",
+    )?;
+
+    let mut cmd = Command::cargo_bin(crate_name!())?;
+    let assert = cmd
+        .current_dir(&dir.path())
+        .arg("--identity")
+        .arg(privkey_path)
+        .arg("--edit")
+        .arg("pandora.age")
+        .env("EDITOR", "cat")
+        .assert();
+
+    assert.stdout(predicate::str::starts_with(plaintext));
+
+    Ok(())
+}
+
+#[test]
 fn edit_permissions_correct() -> Result<()> {
     let (_dir, path) = copy_example_to_tmpdir()?;
     let script = indoc! { r#"

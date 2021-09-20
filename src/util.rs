@@ -151,6 +151,14 @@ mod test_split_editor {
     }
 
     #[test]
+    fn parse_editor_stdin() -> Result<()> {
+        let actual = split_editor(r#" - "#)?;
+        let expected = (String::from("-"), None);
+        assert_eq!(actual, expected);
+        Ok(())
+    }
+
+    #[test]
     fn err_for_empty_editor() {
         let result = split_editor("");
         assert!(result.is_err());
