@@ -42,16 +42,15 @@
         ]
       },
       "locked": {
-        "lastModified": 1631004655,
+        "lastModified": 1632266297,
         "narHash": "sha256-J1yeJk6Gud9ef2pEf6aKQemrfg1pVngYDSh+SAY94xk=",
-        "owner": "yaxitech",
+        "owner": "nix-community",
         "repo": "naersk",
-        "rev": "a0607ce2973483ab7b2ac145f6a298c0ef96f71d",
+        "rev": "ee7edec50b49ab6d69b06d62f1de554efccb1ccd",
         "type": "github"
       },
       "original": {
-        "owner": "yaxitech",
-        "ref": "rust-stable",
+        "owner": "nix-community",
         "repo": "naersk",
         "type": "github"
       }
