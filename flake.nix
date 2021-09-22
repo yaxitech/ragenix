@@ -13,10 +13,7 @@
       inputs.flake-utils.follows = "flake-utils";
     };
     naersk = {
-      # Fork with PRs
-      # - 182: "Add support for aarch64-darwin"
-      # - 191: "Don't rely on unstable flags"
-      url = "github:yaxitech/naersk/rust-stable";
+      url = "github:nix-community/naersk";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     agenix = {
