@@ -157,6 +157,42 @@ fn edit_new_entry_stdin() -> Result<()> {
 }
 
 #[test]
+fn edit_existing_entry_stdin() -> Result<()> {
+    let plaintext = "secret wurzelpfropf";
+
+    let (_dir, path) = copy_example_to_tmpdir()?;
+    let stdin_path = path.join("stdin");
+    fs::write(&stdin_path, plaintext)?;
+
+    let mut cmd = Command::cargo_bin(crate_name!())?;
+    let assert = cmd
+        .current_dir(&path)
+        .arg("--edit")
+        .arg("github-runner.token.age")
+        .env("EDITOR", "-")
+        .pipe_stdin(stdin_path)?
+        .assert();
+
+    assert.success();
+
+    let mut cmd = Command::cargo_bin(crate_name!())?;
+    let assert = cmd
+        .current_dir(&path)
+        .arg("--identity")
+        .arg("keys/id_ed25519")
+        .arg("--edit")
+        .arg("github-runner.token.age")
+        .env("EDITOR", "cat")
+        .assert();
+
+    assert
+        .success()
+        .stdout(predicate::str::starts_with(plaintext));
+
+    Ok(())
+}
+
+#[test]
 fn edit_permissions_correct() -> Result<()> {
     let (_dir, path) = copy_example_to_tmpdir()?;
     let script = indoc! { r#"
