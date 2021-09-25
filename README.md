@@ -34,7 +34,10 @@ The flake also exposes a NixOS module which is passed through from the `agenix` 
   - `--rekey`: the file is ignored.
 * `ragenix` opens a file for editing using `$EDITOR`. Again, you may use `--editor` instead of the
   environment variable.
-  Use a value of `-` to read from standard input.
+  Use a value of `-` to read from standard input. This is useful, for example, to create secrets from clipboard contents:
+  ```ShellSession
+  pbpaste | ragenix --editor - --edit github-runner.token.age
+  ```
 * Prior to editing/rekeying, `ragenix` verifies the validity of the rules file using [this JSON schema](
   ./src/ragenix/agenix.schema.json). The schema is also available to third party applications with
   the `--schema` command line switch. For an example rules file, please refer to the [`agenix` README](

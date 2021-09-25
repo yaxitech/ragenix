@@ -87,6 +87,11 @@ mod test_sha256 {
     }
 }
 
+/// Test if an editor string is a single hyphen to read from stdin
+pub(crate) fn is_stdin(editor: &str) -> bool {
+    split_editor(editor).map_or(false, |(program, args)| program == "-" && args.is_none())
+}
+
 /// Split editor into binary and (shell) arguments
 pub(crate) fn split_editor(editor: &str) -> Result<(String, Option<Vec<String>>)> {
     let mut splitted: Vec<String> = shlex::split(editor)

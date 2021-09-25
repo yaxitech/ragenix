@@ -45,9 +45,7 @@ fn nix_rules_to_json<P: AsRef<Path>>(path: P) -> Result<serde_json::Value> {
 /// [Copied from cole-h/agenix-rs (ASL 2.0 / MIT)](
 /// https://github.com/cole-h/agenix-rs/blob/8e0554179f1ac692fb865c256e9d7fb91b6a692d/src/cli.rs#L236-L257)
 fn editor_hook(path: &Path, editor: &str) -> Result<()> {
-    let (editor, args) = util::split_editor(editor)?;
-
-    if editor == "-" && args.is_none() {
+    if util::is_stdin(editor) {
         let mut src = io::stdin();
         let mut dst = OpenOptions::new()
             .mode(0o600)
@@ -57,6 +55,7 @@ fn editor_hook(path: &Path, editor: &str) -> Result<()> {
             .open(path)?;
         io::copy(&mut src, &mut dst)?;
     } else {
+        let (editor, args) = util::split_editor(editor)?;
         let cmd = process::Command::new(&editor)
             .args(args.unwrap_or_else(Vec::new))
             .arg(path)
@@ -174,7 +173,12 @@ pub(crate) fn edit(
     let input_path = dir.path().join("input");
     let output_path = &entry.path;
 
-    if output_path.exists() {
+    if !output_path.exists() || util::is_stdin(editor) {
+        // If the target file does not yet exist, we don't have to decrypt the result for editing.
+        // Likewise, if we're reading from stdin, we're going to replace the target file completely.
+        fs::File::create(&input_path)?;
+        editor_hook(&input_path, editor)?;
+    } else {
         // If the file already exists, first decrypt it, hash it, open it in `editor`,
         // hash the result, and if the hashes are equal, return.
         let identities = age::get_identities(identity_paths)?;
@@ -198,9 +202,6 @@ pub(crate) fn edit(
             )?;
             return Ok(());
         }
-    } else {
-        fs::File::create(&input_path)?;
-        editor_hook(&input_path, editor)?;
     }
 
     age::encrypt(input_path, output_path.clone(), &entry.public_keys)?;
