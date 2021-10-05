@@ -11,7 +11,7 @@ fn main() -> Result<()> {
     let opts = cli::parse_args(env::args());
 
     if opts.schema {
-        print!("{}", ragenix::AGENIX_JSON_SCHEMA);
+        print!("{}", ragenix::AGENIX_JSON_SCHEMA_STRING);
     } else {
         if let Err(report) = ragenix::validate_rules_file(&opts.rules) {
             eprintln!(

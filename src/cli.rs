@@ -45,7 +45,7 @@ fn build() -> App<'static> {
                 .takes_value(true)
                 .value_name("PRIVATE_KEY")
                 .required(false)
-                .multiple(true)
+                .multiple_values(true)
                 .value_hint(ValueHint::FilePath),
         )
         .arg(
