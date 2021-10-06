@@ -8,7 +8,7 @@ use clap_generate::{
 include!("src/cli.rs");
 
 fn generate_completion<G: Generator>(app: &mut App, outdir: &OsString) {
-    clap_generate::generate_to::<G, _, _>(app, crate_name!(), outdir);
+    clap_generate::generate_to::<G, _, _>(app, crate_name!(), outdir).unwrap();
 }
 
 fn main() {

@@ -3,6 +3,7 @@ use color_eyre::{
     Help, SectionExt,
 };
 use jsonschema::JSONSchema;
+use lazy_static::lazy_static;
 use std::{
     fs::{self, OpenOptions},
     io::{self, Write},
@@ -12,6 +13,13 @@ use std::{
 };
 
 use crate::{age, util};
+
+pub(crate) static AGENIX_JSON_SCHEMA_STRING: &str = std::include_str!("agenix.schema.json");
+
+lazy_static! {
+    static ref AGENIX_JSON_SCHEMA: serde_json::Value =
+        serde_json::from_str(AGENIX_JSON_SCHEMA_STRING).expect("Valid schema!");
+}
 
 /// Reads the rules file using Nix to output the attribute set as a JSON string.
 /// Return value is parsed into a serde JSON value.
@@ -79,8 +87,6 @@ fn editor_hook(path: &Path, editor: &str) -> Result<()> {
     Ok(())
 }
 
-pub(crate) static AGENIX_JSON_SCHEMA: &str = std::include_str!("agenix.schema.json");
-
 #[derive(Debug)]
 pub(crate) struct RagenixRule {
     pub path: PathBuf,
@@ -94,11 +100,9 @@ pub(crate) fn validate_rules_file<P: AsRef<Path>>(path: P) -> Result<()> {
     }
 
     let instance = nix_rules_to_json(&path)?;
-    let schema =
-        serde_json::from_str(AGENIX_JSON_SCHEMA).wrap_err("Failed to parse Agenix JSON schema")?;
     let compiled = JSONSchema::options()
         .with_draft(jsonschema::Draft::Draft7)
-        .compile(&schema)?;
+        .compile(&AGENIX_JSON_SCHEMA)?;
     let result = compiled.validate(&instance);
 
     if let Err(errors) = result {
