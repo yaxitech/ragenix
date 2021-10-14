@@ -20,9 +20,13 @@
       url = "github:ryantm/agenix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # QEMU 6.1.0 hangs when running NixOS tests on a virtualized host, e.g., a GitHub Action runner
+    # Therefore, we use a NixOS Python test which still relies on QEMU 6.0.0.
+    # Upstream issue: https://github.com/NixOS/nixpkgs/issues/141596
+    nixpkgs-nixos-test.url = "github:nixos/nixpkgs/e1fc1a80a071c90ab65fb6eafae5520579163783";
   };
 
-  outputs = { self, nixpkgs, flake-utils, rust-overlay, naersk, agenix }:
+  outputs = { self, nixpkgs, flake-utils, rust-overlay, naersk, agenix, nixpkgs-nixos-test }:
     let
       cargoTOML = builtins.fromTOML (builtins.readFile ./Cargo.toml);
       name = cargoTOML.package.name;
@@ -248,43 +252,36 @@
       (eachLinuxSystem (system: {
         checks.nixos-module =
           let
-            pythonTest = import (nixpkgs + "/nixos/lib/testing-python.nix") { system = "x86_64-linux"; };
+            pythonTest = import (nixpkgs-nixos-test + "/nixos/lib/testing-python.nix") { inherit system; };
             secretsConfig = import ./example/secrets-configuration.nix;
+            secretPath = "/run/secrets/github-runner.token";
             ageSshKeysConfig = { lib, ... }: {
               # XXX: This is insecure and copies your private key plaintext to the Nix store
               #      NEVER DO THIS IN YOUR CONFIG!
-              age.sshKeyPaths = lib.mkForce [
-                ./example/keys/id_ed25519
-              ];
+              age.sshKeyPaths = lib.mkForce [ ./example/keys/id_ed25519 ];
             };
-            secretPath = "/run/secrets/github-runner.token";
           in
-          with pythonTest; makeTest {
-            nodes = {
-              client = { ... }: {
-                imports = [
-                  self.nixosModules.age
-                  secretsConfig
-                  ageSshKeysConfig
-                ];
-                nixpkgs.overlays = [ self.overlay ];
-              };
-            };
+          pythonTest.makeTest {
+            machine.imports = [
+              self.nixosModules.age
+              secretsConfig
+              ageSshKeysConfig
+            ];
 
             testScript = ''
-              start_all()
-              client.wait_for_unit("multi-user.target")
-              client.succeed('test -e "${secretPath}"')
-              client.succeed(
+              machine.start()
+              machine.wait_for_unit("multi-user.target")
+              machine.succeed('test -e "${secretPath}"')
+              machine.succeed(
                   '[[ "$(cat "${secretPath}")" == "wurzelpfropf!" ]] || exit 1'
               )
-              client.succeed(
+              machine.succeed(
                   '[[ "$(stat -c "%a" "${secretPath}")" == "400"  ]] || exit 1'
               )
-              client.succeed(
+              machine.succeed(
                   '[[ "$(stat -c "%U" "${secretPath}")" == "root" ]] || exit 1'
               )
-              client.succeed(
+              machine.succeed(
                   '[[ "$(stat -c "%G" "${secretPath}")" == "root" ]] || exit 1'
               )
             '';
