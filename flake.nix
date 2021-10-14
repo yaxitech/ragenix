@@ -174,6 +174,27 @@
             mkdir $out
           '';
 
+          checks.metadata = pkgs.runCommand "check-metadata" { } ''
+            set -euo pipefail
+
+            flakeDescription=${lib.escapeShellArg (import ./flake.nix).description}
+            packageDescription=${lib.escapeShellArg cargoTOML.package.description}
+            if [[ "$flakeDescription" != "$packageDescription" ]]; then
+              echo 'The descriptions given in flake.nix and Cargo.toml do not match'
+              exit 1
+            fi
+
+            flakePackageName=${pkgs.ragenix.pname}
+            cargoName=${cargoTOML.package.name}
+            if [[ "$flakePackageName" != "$cargoName" ]]; then
+              echo 'The package name given in flake.nix and Cargo.toml do not match'
+              exit 1
+            fi
+
+            echo 'All metadata checks completed successfully'
+            mkdir $out # success
+          '';
+
           # `nix develop`
           devShell = pkgs.mkShell {
             name = "${name}-dev-shell";
