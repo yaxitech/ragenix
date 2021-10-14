@@ -45,8 +45,10 @@ jobs:
           branch: flake-updates
           token: ${{ secrets.PAT }}
           title: Update flake inputs
-          body: ${{ steps.flake-metadata.outputs.body }}
-
+          body: |
+            ```
+            ${{ steps.flake-metadata.outputs.body }}
+            ```
 
       - name: Check outputs
         run: |
