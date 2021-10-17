@@ -24,19 +24,40 @@ The flake also exposes a NixOS module which is passed through from the `agenix` 
 
 `ragenix` resembles the command line options and behavior of `agenix`:
 
+```
+USAGE:
+    ragenix [FLAGS] [OPTIONS] <--edit <FILE>|--rekey|--schema>
+
+FLAGS:
+    -h, --help       Print help information
+    -r, --rekey      re-encrypts all secrets with specified recipients
+    -s, --schema     Prints the JSON schema Agenix rules have to conform to
+    -v, --verbose    verbose output
+    -V, --version    Print version information
+
+OPTIONS:
+    -e, --edit <FILE>                  edits the age-encrypted FILE using $EDITOR
+        --editor <EDITOR>              editor to use when editing FILE [env: EDITOR=vim]
+    -i, --identity <PRIVATE_KEY>...    private key to use when decrypting
+        --rules <RULES>                path to Nix file specifying recipient public keys [env:
+                                       RULES=] [default: ./secrets.nix]
+```
+
 * By default, `ragenix` looks for a Nix rules file in `./secrets.nix`. You may change this path by setting the `RULES`
   environment variable accordingly. As a `ragenix` addon, you may also use the `--rules` command line option.
 * The Nix rules reference age-encrypted files relative to the rules file. For example, a `./secrets/secrets.nix` file with the
   following content would instruct `ragenix` to look for `mysecret.age` in `./secrets/`: 
-  `{ "mysecret.age".publicKeys = "age1hunh4g..."; }`.
+  ```nix
+  { "mysecret.age".publicKeys = "age1hunh4g..."; }
+  ```
 * If a file given in the secrets rules does not exist:
   - `--edit`: the file is created prior to opening it for editing.
   - `--rekey`: the file is ignored.
 * `ragenix` opens a file for editing using `$EDITOR`. Again, you may use `--editor` instead of the
   environment variable.
   Use a value of `-` to read from standard input. This is useful, for example, to create secrets from clipboard contents:
-  ```ShellSession
-  pbpaste | ragenix --editor - --edit github-runner.token.age
+  ```shell
+  pbpaste | ragenix --editor - --edit mysecret.age
   ```
 * Prior to editing/rekeying, `ragenix` verifies the validity of the rules file using [this JSON schema](
   ./src/ragenix/agenix.schema.json). The schema is also available to third party applications with
