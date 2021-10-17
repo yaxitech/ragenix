@@ -1,5 +1,9 @@
 # ragenix
 
+[![Build status](https://img.shields.io/github/workflow/status/yaxitech/ragenix/CI)](https://github.com/yaxitech/ragenix/actions?query=branch%3Amain)
+[![License](https://img.shields.io/github/license/veehaitch/devicecheck-appattest)](http://www.apache.org/licenses/LICENSE-2.0.html)
+[![Written in Rust](https://img.shields.io/badge/code-rust-orange)](https://www.rust-lang.org)
+
 `ragenix` provides age-encrypted secrets for NixOS systems which live in the Nix store
 and are decrypted on system activation. Using `ragenix` to create, edit and rekey secrets
 is possible on any system which has Nix installed—with particular support for NixOS and macOS.
