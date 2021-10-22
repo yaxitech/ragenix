@@ -91,9 +91,10 @@
                 # Provide a symlink from `agenix` to `ragenix` for compat
                 ln -sr "$out/bin/ragenix" "$out/bin/agenix"
 
-                installShellCompletion --bash target/release/build/ragenix-*/out/ragenix.bash
-                installShellCompletion --zsh  target/release/build/ragenix-*/out/_ragenix
-                installShellCompletion --fish target/release/build/ragenix-*/out/ragenix.fish
+                # Install shell completions
+                installShellCompletion --bash $CARGO_TARGET_DIR/release/build/ragenix-*/out/ragenix.bash
+                installShellCompletion --zsh  $CARGO_TARGET_DIR/release/build/ragenix-*/out/_ragenix
+                installShellCompletion --fish $CARGO_TARGET_DIR/release/build/ragenix-*/out/ragenix.fish
               '';
             };
           };
@@ -153,6 +154,24 @@
               echo "ragenix: $ragenix"
               exit 1
             fi
+          '';
+
+          checks.shell-completion = pkgs.runCommand "check-shell-completions" { } ''
+            set -euo pipefail
+
+            if [[ ! -e "${pkgs.ragenix}/share/bash-completion" ]]; then
+              echo 'Failed to install bash completions'
+            elif [[ ! -e "${pkgs.ragenix}/share/zsh" ]]; then
+              echo 'Failed to install zsh completions'
+            elif [[ ! -e "${pkgs.ragenix}/share/fish" ]]; then
+              echo 'Failed to install fish completions'
+            else
+              echo '${name} shell completions installed successfully'
+              mkdir $out
+              exit 0
+            fi
+
+            exit 1
           '';
 
           checks.decrypt-with-age = pkgs.runCommand "decrypt-with-age" { } ''
