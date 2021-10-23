@@ -3,7 +3,7 @@ name = "ragenix"
 description = "A rust drop-in replacement for agenix"
 version = "0.1.0"
 authors = ["Vincent Haupert <vincent@yaxi.tech>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 age = { version = "^0.6", default-features = false, features = [ "cli-common", "ssh", "armor" ] }

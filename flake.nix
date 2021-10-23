@@ -88,12 +88,22 @@
 
             overrideMain = _: {
               postInstall = ''
+                set -euo pipefail
+
                 # Provide a symlink from `agenix` to `ragenix` for compat
                 ln -sr "$out/bin/ragenix" "$out/bin/agenix"
 
-                installShellCompletion --bash target/release/build/ragenix-*/out/ragenix.bash
-                installShellCompletion --zsh  target/release/build/ragenix-*/out/_ragenix
-                installShellCompletion --fish target/release/build/ragenix-*/out/ragenix.fish
+                # Install shell completions
+                res=$(
+                  cat "$cargo_build_output_json" \
+                    | jq 'select(.reason == "build-script-executed") | select(.env != []) | select(.env[0][0] | startswith("RAGENIX"))' \
+                    | jq '.env | map({(.[0]):(.[1])}) | add'
+                )
+
+                set +u # required due to `installShellCompletion`'s implementation
+                installShellCompletion --bash "$(echo "$res" | jq -r '.RAGENIX_COMPLETIONS_BASH')"
+                installShellCompletion --zsh  "$(echo "$res" | jq -r '.RAGENIX_COMPLETIONS_ZSH')"
+                installShellCompletion --fish "$(echo "$res" | jq -r '.RAGENIX_COMPLETIONS_FISH')"
               '';
             };
           };
@@ -153,6 +163,24 @@
               echo "ragenix: $ragenix"
               exit 1
             fi
+          '';
+
+          checks.shell-completion = pkgs.runCommand "check-shell-completions" { } ''
+            set -euo pipefail
+
+            if [[ ! -e "${pkgs.ragenix}/share/bash-completion" ]]; then
+              echo 'Failed to install bash completions'
+            elif [[ ! -e "${pkgs.ragenix}/share/zsh" ]]; then
+              echo 'Failed to install zsh completions'
+            elif [[ ! -e "${pkgs.ragenix}/share/fish" ]]; then
+              echo 'Failed to install fish completions'
+            else
+              echo '${name} shell completions installed successfully'
+              mkdir $out
+              exit 0
+            fi
+
+            exit 1
           '';
 
           checks.decrypt-with-age = pkgs.runCommand "decrypt-with-age" { } ''
