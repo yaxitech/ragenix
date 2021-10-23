@@ -88,13 +88,22 @@
 
             overrideMain = _: {
               postInstall = ''
+                set -euo pipefail
+
                 # Provide a symlink from `agenix` to `ragenix` for compat
                 ln -sr "$out/bin/ragenix" "$out/bin/agenix"
 
                 # Install shell completions
-                installShellCompletion --bash $CARGO_TARGET_DIR/release/build/ragenix-*/out/ragenix.bash
-                installShellCompletion --zsh  $CARGO_TARGET_DIR/release/build/ragenix-*/out/_ragenix
-                installShellCompletion --fish $CARGO_TARGET_DIR/release/build/ragenix-*/out/ragenix.fish
+                res=$(
+                  cat "$cargo_build_output_json" \
+                    | jq 'select(.reason == "build-script-executed") | select(.env != []) | select(.env[0][0] | startswith("RAGENIX"))' \
+                    | jq '.env | map({(.[0]):(.[1])}) | add'
+                )
+
+                set +u # required due to `installShellCompletion`'s implementation
+                installShellCompletion --bash "$(echo "$res" | jq -r '.RAGENIX_COMPLETIONS_BASH')"
+                installShellCompletion --zsh  "$(echo "$res" | jq -r '.RAGENIX_COMPLETIONS_ZSH')"
+                installShellCompletion --fish "$(echo "$res" | jq -r '.RAGENIX_COMPLETIONS_FISH')"
               '';
             };
           };

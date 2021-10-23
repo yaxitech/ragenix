@@ -16,10 +16,23 @@ fn main() -> Result<(), Error> {
     let mut app = build();
     app.set_bin_name(crate_name!());
 
-    let bin_name = crate_name!();
-    generate_to(Bash, &mut app, bin_name, &outdir)?;
-    generate_to(Fish, &mut app, bin_name, &outdir)?;
-    generate_to(Zsh, &mut app, bin_name, &outdir)?;
+    let bash_outpath = generate_to(Bash, &mut app, crate_name!(), &outdir)?;
+    println!(
+        "cargo:rustc-env=RAGENIX_COMPLETIONS_BASH={}",
+        bash_outpath.to_string_lossy()
+    );
+
+    let fish_outpath = generate_to(Fish, &mut app, crate_name!(), &outdir)?;
+    println!(
+        "cargo:rustc-env=RAGENIX_COMPLETIONS_FISH={}",
+        fish_outpath.to_string_lossy()
+    );
+
+    let zsh_outpath = generate_to(Zsh, &mut app, crate_name!(), &outdir)?;
+    println!(
+        "cargo:rustc-env=RAGENIX_COMPLETIONS_ZSH={}",
+        zsh_outpath.to_string_lossy()
+    );
 
     Ok(())
 }
