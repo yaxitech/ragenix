@@ -254,7 +254,7 @@
           let
             pythonTest = import (nixpkgs-nixos-test + "/nixos/lib/testing-python.nix") { inherit system; };
             secretsConfig = import ./example/secrets-configuration.nix;
-            secretPath = "/run/secrets/github-runner.token";
+            secretPath = "/run/agenix/github-runner.token";
             ageSshKeysConfig = { lib, ... }: {
               # XXX: This is insecure and copies your private key plaintext to the Nix store
               #      NEVER DO THIS IN YOUR CONFIG!
