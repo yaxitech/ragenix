@@ -17,7 +17,7 @@ and solid tests.
 
 ## Installation
 
-As `ragenix` seeks to replace `agenix` without breaking compatability, getting started with age-encrypted
+As `ragenix` seeks to replace `agenix` without breaking compatibility, getting started with age-encrypted
 secrets or switching from `agenix` to `ragenix` is easy: just follow the original [instructions from `agenix`](
 https://github.com/ryantm/agenix#installation) while replacing references to
 `github.com/ryantm/agenix` with `github.com/yaxitech/ragenix`. Everything else should remain the
