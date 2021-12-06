@@ -1,6 +1,7 @@
 //! Uses the age crate to encrypt, decrypt and rekey files
 
 use std::{
+    convert::Into,
     fs,
     io::{self, BufReader},
     path::Path,
@@ -96,7 +97,7 @@ pub(crate) fn decrypt<P: AsRef<Path>>(
     let decryptor = get_age_decryptor(input_file)?;
     decryptor
         .decrypt(identities.iter().map(|i| i.as_ref() as &dyn age::Identity))
-        .map_err(|e| e.into())
+        .map_err(Into::into)
         .and_then(|mut plaintext_reader| {
             let output = output_file
                 .as_ref()
@@ -164,7 +165,7 @@ pub(crate) fn rekey<P: AsRef<Path>>(
     let decryptor = get_age_decryptor(&file)?;
     decryptor
         .decrypt(identities.iter().map(|i| i.as_ref() as &dyn age::Identity))
-        .map_err(|e| e.into())
+        .map_err(Into::into)
         .and_then(|mut plaintext_reader| {
             // Create a temporary file to write the re-encrypted data to
             let outfile = NamedTempFile::new()?;
