@@ -20,18 +20,14 @@
       url = "github:ryantm/agenix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    # QEMU 6.1.0 hangs when running NixOS tests on a virtualized host, e.g., a GitHub Action runner
-    # Therefore, we use a NixOS Python test which still relies on QEMU 6.0.0.
-    # Upstream issue: https://github.com/NixOS/nixpkgs/issues/141596
-    nixpkgs-nixos-test.url = "github:nixos/nixpkgs/e1fc1a80a071c90ab65fb6eafae5520579163783";
   };
 
-  outputs = { self, nixpkgs, flake-utils, rust-overlay, naersk, agenix, nixpkgs-nixos-test }:
+  outputs = { self, nixpkgs, flake-utils, rust-overlay, naersk, agenix }:
     let
       cargoTOML = builtins.fromTOML (builtins.readFile ./Cargo.toml);
       name = cargoTOML.package.name;
 
-      lib = import (nixpkgs + "/lib");
+      lib = import "${nixpkgs}/lib";
 
       # Recursively merge a list of attribute sets. Following elements take
       # precedence over previous elements if they have conflicting keys.
@@ -252,7 +248,7 @@
       (eachLinuxSystem (system: {
         checks.nixos-module =
           let
-            pythonTest = import (nixpkgs-nixos-test + "/nixos/lib/testing-python.nix") { inherit system; };
+            pythonTest = import ("${nixpkgs}/nixos/lib/testing-python.nix") { inherit system; };
             secretsConfig = import ./example/secrets-configuration.nix;
             secretPath = "/run/agenix/github-runner.token";
             ageSshKeysConfig = { lib, ... }: {
