@@ -4,6 +4,7 @@ use clap::{
     crate_authors, crate_description, crate_name, crate_version, App, Arg, ArgGroup, ValueHint,
 };
 
+#[allow(dead_code)] // False positive
 #[derive(Debug, Clone)]
 pub(crate) struct Opts {
     pub edit: Option<String>,
@@ -90,7 +91,7 @@ fn build() -> App<'static> {
 }
 
 /// Parse the command line arguments using Clap
-#[allow(dead_code)] // WTF?
+#[allow(dead_code)] // False positive
 pub(crate) fn parse_args<I, T>(itr: I) -> Opts
 where
     I: IntoIterator<Item = T>,
