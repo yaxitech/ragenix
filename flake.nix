@@ -7,13 +7,8 @@
       url = "github:numtide/flake-utils";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    rust-overlay = {
-      url = "github:oxalica/rust-overlay";
-      inputs.nixpkgs.follows = "nixpkgs";
-      inputs.flake-utils.follows = "flake-utils";
-    };
-    naersk = {
-      url = "github:nix-community/naersk";
+    fenix = {
+      url = "github:nix-community/fenix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     agenix = {
@@ -22,7 +17,7 @@
     };
   };
 
-  outputs = { self, nixpkgs, flake-utils, rust-overlay, naersk, agenix }:
+  outputs = { self, nixpkgs, flake-utils, fenix, agenix }:
     let
       cargoTOML = builtins.fromTOML (builtins.readFile ./Cargo.toml);
       name = cargoTOML.package.name;
@@ -38,7 +33,7 @@
 
       pkgsFor = system: import nixpkgs {
         inherit system;
-        overlays = [ rust-overlay.overlay self.overlay ];
+        overlays = [ fenix.overlay self.overlay ];
       };
     in
     recursiveMerge [
@@ -49,26 +44,42 @@
         let
           pkgs = pkgsFor system;
 
-          rust = pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain;
+          rust = fenix.packages.${system}.fromToolchainFile {
+            file = ./rust-toolchain;
+            sha256 = "sha256-6PfBjfCI9DaNRyGigEmuUP2pcamWsWGc4g7SNEHqD2c=";
+          };
 
-          naersk-lib = naersk.lib."${system}".override {
+          buildRustPackage = (pkgs.makeRustPlatform {
             cargo = rust;
             rustc = rust;
-          };
+          }).buildRustPackage;
         in
         rec {
           # `nix build`
-          packages.${name} = naersk-lib.buildPackage {
+          packages.${name} = buildRustPackage rec {
+            inherit name;
             pname = name;
-            root = ./.;
+            src = nixpkgs.lib.cleanSource ./.;
+            cargoLock.lockFile = ./Cargo.lock;
 
+            preBuildPhases = [ "codeStyleConformanceCheck" ];
+
+            codeStyleConformanceCheck = ''
+              export PATH="${rust}/bin:$PATH";
+              # rustfmt
+              cargo fmt -- --check
+              # clippy - needs to rebuild anyhow, so can as well check before the build
+              cargo clippy --all --all-features --tests -- -D clippy::pedantic -D warnings
+            '';
+
+            # buildDeps
             nativeBuildInputs = with pkgs; [
               pkg-config
               installShellFiles
+              nixFlakes
             ];
 
-            requiredSystemFeatures = lib.optionals (!pkgs.stdenv.isDarwin) [ "recursive-nix" ];
-
+            # runtimeDeps
             buildInputs = with pkgs; [
               openssl
               nixFlakes
@@ -79,33 +90,23 @@
 
             doCheck = true;
 
-            cargoTestCommands = x: x ++ [
-              # clippy
-              ''cargo clippy --all --all-features --tests -- -D clippy::pedantic -D warnings''
-              # rustfmt
-              ''cargo fmt -- --check''
-            ];
+            # for some tests
+            requiredSystemFeatures = lib.optionals (!pkgs.stdenv.isDarwin && doCheck) [ "recursive-nix" ];
 
-            overrideMain = _: {
-              postInstall = ''
-                set -euo pipefail
+            postInstall = ''
+              set -euo pipefail
 
-                # Provide a symlink from `agenix` to `ragenix` for compat
-                ln -sr "$out/bin/ragenix" "$out/bin/agenix"
+              # Provide a symlink from `agenix` to `ragenix` for compat
+              ln -sr "$out/bin/ragenix" "$out/bin/agenix"
 
-                # Install shell completions
-                res=$(
-                  cat "$cargo_build_output_json" \
-                    | jq 'select(.reason == "build-script-executed") | select(.env != []) | select(.env[0][0] | startswith("RAGENIX"))' \
-                    | jq '.env | map({(.[0]):(.[1])}) | add'
-                )
+              # Stdout of build.rs
+              buildOut=$(find "$tmpDir/build" -type f -regex ".*\/ragenix-[a-z0-9]+\/output")
 
-                set +u # required due to `installShellCompletion`'s implementation
-                installShellCompletion --bash "$(echo "$res" | jq -r '.RAGENIX_COMPLETIONS_BASH')"
-                installShellCompletion --zsh  "$(echo "$res" | jq -r '.RAGENIX_COMPLETIONS_ZSH')"
-                installShellCompletion --fish "$(echo "$res" | jq -r '.RAGENIX_COMPLETIONS_FISH')"
-              '';
-            };
+              set +u # required due to `installShellCompletion`'s implementation
+              installShellCompletion --bash "$(grep -oP 'RAGENIX_COMPLETIONS_BASH=\K.*' $buildOut)"
+              installShellCompletion --zsh  "$(grep -oP 'RAGENIX_COMPLETIONS_ZSH=\K.*' $buildOut)"
+              installShellCompletion --fish "$(grep -oP 'RAGENIX_COMPLETIONS_FISH=\K.*' $buildOut)"
+            '';
           };
           defaultPackage = packages.${name};
 
