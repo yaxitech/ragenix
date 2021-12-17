@@ -16,12 +16,10 @@ jobs:
         os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v2.3.4
+      - uses: actions/checkout@v2
       - name: Install Nix
-        uses: cachix/install-nix-action@v13
+        uses: cachix/install-nix-action@v15
         with:
-          install_url: https://nixos-nix-install-tests.cachix.org/serve/6l6zv3hfyqp402iax9jayd3i5qkmxx1f/install
-          install_options: '--tarball-url-prefix https://nixos-nix-install-tests.cachix.org/serve'
           extra_nix_config: |
             experimental-features = nix-command flakes recursive-nix
             system-features = nixos-test benchmark big-parallel kvm recursive-nix
