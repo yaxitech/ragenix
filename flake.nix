@@ -251,17 +251,17 @@
             pythonTest = import ("${nixpkgs}/nixos/lib/testing-python.nix") { inherit system; };
             secretsConfig = import ./example/secrets-configuration.nix;
             secretPath = "/run/agenix/github-runner.token";
-            ageSshKeysConfig = { lib, ... }: {
+            ageIdentitiesConfig = { lib, ... }: {
               # XXX: This is insecure and copies your private key plaintext to the Nix store
               #      NEVER DO THIS IN YOUR CONFIG!
-              age.sshKeyPaths = lib.mkForce [ ./example/keys/id_ed25519 ];
+              age.identityPaths = lib.mkForce [ ./example/keys/id_ed25519 ];
             };
           in
           pythonTest.makeTest {
             machine.imports = [
               self.nixosModules.age
               secretsConfig
-              ageSshKeysConfig
+              ageIdentitiesConfig
             ];
 
             testScript = ''
