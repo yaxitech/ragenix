@@ -68,8 +68,16 @@
               export PATH="${rust}/bin:$PATH";
               # rustfmt
               cargo fmt -- --check
-              # clippy - needs to rebuild anyhow, so can as well check before the build
-              cargo clippy --all --all-features --tests -- -D clippy::pedantic -D warnings
+              # clippy - use same checkType as check-phase to avoid double building
+              if [ "''${cargoCheckType}" != "debug" ]; then
+                  cargoCheckProfileFlag="--''${cargoCheckType}"
+              fi
+              argstr="''${cargoCheckProfileFlag} --workspace --all-features --tests "
+              cargo clippy -j $NIX_BUILD_CORES \
+                 $argstr -- \
+                 -D clippy::pedantic \
+                 -D warnings
+
             '';
 
             # buildDeps
