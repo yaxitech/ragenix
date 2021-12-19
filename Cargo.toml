@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 age = { version = "^0.6", default-features = false, features = [ "cli-common", "ssh", "armor" ] }
-clap = "^3.0.0-beta.4"
+clap = { version = "3.0.0-rc.7", features = [ "cargo", "env" ] }
 color-eyre = { version = "^0.5", default-features = false, features = [ "track-caller" ] }
 home = "^0.5"
 jsonschema = "^0.12"
@@ -26,5 +26,5 @@ indoc = "^1.0"
 hex-literal = "^0.3"
 
 [build-dependencies]
-clap = "^3.0.0-beta.4"
-clap_generate = "^3.0.0-beta.4"
+clap = { version = "3.0.0-rc.7", features = [ "cargo", "env" ] }
+clap_generate = "3.0.0-rc.7"

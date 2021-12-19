@@ -23,7 +23,7 @@ fn build() -> App<'static> {
         .about(crate_description!())
         .arg(
             Arg::new("edit")
-                .about("edits the age-encrypted FILE using $EDITOR")
+                .help("edits the age-encrypted FILE using $EDITOR")
                 .long("edit")
                 .short('e')
                 .takes_value(true)
@@ -33,14 +33,14 @@ fn build() -> App<'static> {
         )
         .arg(
             Arg::new("rekey")
-                .about("re-encrypts all secrets with specified recipients")
+                .help("re-encrypts all secrets with specified recipients")
                 .long("rekey")
                 .short('r')
                 .takes_value(false),
         )
         .arg(
             Arg::new("identity")
-                .about("private key to use when decrypting")
+                .help("private key to use when decrypting")
                 .long("identity")
                 .short('i')
                 .takes_value(true)
@@ -51,14 +51,14 @@ fn build() -> App<'static> {
         )
         .arg(
             Arg::new("verbose")
-                .about("verbose output")
+                .help("verbose output")
                 .long("verbose")
                 .short('v')
                 .takes_value(false),
         )
         .arg(
             Arg::new("schema")
-                .about("Prints the JSON schema Agenix rules have to conform to")
+                .help("Prints the JSON schema Agenix rules have to conform to")
                 .long("schema")
                 .short('s')
                 .takes_value(false),
@@ -70,7 +70,7 @@ fn build() -> App<'static> {
         )
         .arg(
             Arg::new("editor")
-                .about("editor to use when editing FILE")
+                .help("editor to use when editing FILE")
                 .long("editor")
                 .takes_value(true)
                 .env("EDITOR")
@@ -79,7 +79,7 @@ fn build() -> App<'static> {
         )
         .arg(
             Arg::new("rules")
-                .about("path to Nix file specifying recipient public keys")
+                .help("path to Nix file specifying recipient public keys")
                 .long("rules")
                 .takes_value(true)
                 .env("RULES")
