@@ -28,7 +28,9 @@ jobs:
         with:
           name: wurzelpfropf
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN_PUBLIC }}'
-      - name: 'Run all checks'
+      - name: 'Check flake evaluates'
+        run: nix flake check --no-build .
+      - name: 'Run checks'
         run: nix flake check -L .
       - name: 'Build package'
         run: nix build -L .

@@ -7,9 +7,10 @@
       url = "github:numtide/flake-utils";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    fenix = {
-      url = "github:nix-community/fenix";
+    rust-overlay = {
+      url = "github:oxalica/rust-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
+      inputs.flake-utils.follows = "flake-utils";
     };
     agenix = {
       url = "github:ryantm/agenix";
@@ -17,7 +18,7 @@
     };
   };
 
-  outputs = { self, nixpkgs, flake-utils, fenix, agenix }:
+  outputs = { self, nixpkgs, flake-utils, rust-overlay, agenix }:
     let
       cargoTOML = builtins.fromTOML (builtins.readFile ./Cargo.toml);
       name = cargoTOML.package.name;
@@ -33,7 +34,7 @@
 
       pkgsFor = system: import nixpkgs {
         inherit system;
-        overlays = [ fenix.overlay self.overlay ];
+        overlays = [ rust-overlay.overlay self.overlay ];
       };
     in
     recursiveMerge [
@@ -44,10 +45,7 @@
         let
           pkgs = pkgsFor system;
 
-          rust = fenix.packages.${system}.fromToolchainFile {
-            file = ./rust-toolchain;
-            sha256 = "sha256-6PfBjfCI9DaNRyGigEmuUP2pcamWsWGc4g7SNEHqD2c=";
-          };
+          rust = pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain;
 
           buildRustPackage = (pkgs.makeRustPlatform {
             cargo = rust;
