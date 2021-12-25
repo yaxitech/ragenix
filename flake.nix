@@ -69,6 +69,15 @@
                   );
             };
           };
+          exampleRagePlugin = pkgs.rage.overrideAttrs (old: {
+            doCheck = false;
+            cargoBuildFlags = [ "--example" "age-plugin-unencrypted" ];
+            postInstall = ''
+              mkdir -p $out/bin
+              find target/**/release/examples -name age-plugin-unencrypted -exec cp {} $out/bin/age-plugin-unencrypted \;
+            '';
+          });
+
         in
         rec {
           # `nix build`
@@ -248,6 +257,32 @@
             echo 'All metadata checks completed successfully'
             mkdir $out # success
           '';
+
+          checks.age-plugin = pkgs.runCommand "age-plugin"
+            {
+              buildInputs = [ pkgs.nixFlakes exampleRagePlugin ];
+              requiredSystemFeatures = lib.optionals (!pkgs.stdenv.isDarwin) [ "recursive-nix" ];
+            }
+            ''
+              set -euo pipefail
+              cp -r '${./.}/example/.' "$TMPDIR"
+              cd "$TMPDIR"
+
+              # Encrypt with ragenix
+              echo 'wurzelpfropf' | ${pkgs.ragenix}/bin/ragenix --rules ./secrets-plugin.nix --editor - --edit unencrypted.age
+
+              # Decrypt with rage
+              decrypted="$(${pkgs.rage}/bin/rage -i '${./example/keys/example_plugin_key.txt}' -d unencrypted.age)"
+              if [[ "$decrypted" != "wurzelpfropf" ]]; then
+                echo 'Unexpected value for decryption with plugin'
+                exit 1
+              fi
+
+              # Rekey
+              ${pkgs.ragenix}/bin/ragenix --rules ./secrets-plugin.nix -i '${./example/keys/example_plugin_key.txt}' --rekey
+
+              mkdir $out # success
+            '';
 
           # `nix develop`
           devShell = pkgs.mkShell {
