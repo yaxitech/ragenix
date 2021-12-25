@@ -23,7 +23,7 @@
       cargoTOML = builtins.fromTOML (builtins.readFile ./Cargo.toml);
       name = cargoTOML.package.name;
 
-      lib = import "${nixpkgs}/lib";
+      lib = nixpkgs.lib;
 
       # Recursively merge a list of attribute sets. Following elements take
       # precedence over previous elements if they have conflicting keys.
@@ -51,13 +51,32 @@
             cargo = rust;
             rustc = rust;
           }).buildRustPackage;
+
+          # Filter out VCS files and files unrelated to the Rust ragenix package
+          filterRustSource = src: with lib; cleanSourceWith {
+            filter = cleanSourceFilter;
+            src = cleanSourceWith {
+              inherit src;
+              filter = name: type:
+                let pathWithoutPrefix = removePrefix (toString src) name; in
+                  ! (
+                    hasPrefix "/.github" pathWithoutPrefix ||
+                    pathWithoutPrefix == "/.gitignore" ||
+                    pathWithoutPrefix == "/LICENSE" ||
+                    pathWithoutPrefix == "/README.md" ||
+                    pathWithoutPrefix == "/flake.lock" ||
+                    pathWithoutPrefix == "/flake.nix"
+                  );
+            };
+          };
         in
         rec {
           # `nix build`
           packages.${name} = buildRustPackage rec {
-            inherit name;
             pname = name;
-            src = nixpkgs.lib.cleanSource ./.;
+            version = cargoTOML.package.version;
+            src = filterRustSource ./.;
+
             cargoLock.lockFile = ./Cargo.lock;
 
             preBuildPhases = [ "codeStyleConformanceCheck" ];
