@@ -154,35 +154,6 @@
             mkdir $out #sucess
           '';
 
-          checks.tests-recursive-nix = packages.${name}.overrideAttrs (oldAttrs: {
-            name = "tests-recursive-nix";
-            cargoCheckFeatures = [ "recursive-nix" ];
-            requiredSystemFeatures = [ "recursive-nix" ];
-            checkInputs = [ pkgs.nixFlakes ];
-            # No need to run the formatting checks again
-            codeStyleConformanceCheck = "true";
-          });
-
-          checks.rekey = pkgs.runCommand "run-rekey"
-            {
-              buildInputs = [ pkgs.nixFlakes ];
-              requiredSystemFeatures = [ "recursive-nix" ];
-            }
-            ''
-              set -euo pipefail
-              cp -r '${./.}/example/.' "$TMPDIR"
-              chmod 600 *.age
-              cd "$TMPDIR"
-
-              ln -s "${./example/keys}" "$TMPDIR/.ssh"
-              export HOME="$TMPDIR"
-
-              ${pkgs.ragenix}/bin/ragenix --rekey
-              ${pkgs.agenix}/bin/agenix   --rekey
-
-              mkdir "$out"
-            '';
-
           checks.schema = pkgs.runCommand "emit-schema" { } ''
             set -euo pipefail
             ${pkgs.ragenix}/bin/ragenix --schema > "$TMPDIR/agenix.schema.json"
@@ -265,48 +236,6 @@
             mkdir $out # success
           '';
 
-          checks.age-plugin =
-            let
-              rageExamplePlugin = pkgs.rage.overrideAttrs (old: rec {
-                pname = "age-plugin-unencrypted";
-                doCheck = false;
-                cargoBuildFlags = [ "--example" pname ];
-                installPhase = ''
-                  set -euo pipefail
-                  find target/**/release/examples -name ${pname} \
-                    -exec install -D {} $out/bin/${pname} \;
-                '';
-              });
-              plugins = [ rageExamplePlugin ];
-              ragenixWithPlugins = pkgs.ragenix.override { inherit plugins; };
-              pluginsSearchPath = lib.strings.makeBinPath plugins;
-            in
-            pkgs.runCommand "age-plugin"
-              {
-                buildInputs = with pkgs; [ nixFlakes rage ragenixWithPlugins ];
-                requiredSystemFeatures = lib.optionals (!pkgs.stdenv.isDarwin) [ "recursive-nix" ];
-              }
-              ''
-                set -euo pipefail
-                cp -r '${./.}/example/.' "$TMPDIR"
-                cd "$TMPDIR"
-
-                # Encrypt with ragenix
-                echo 'wurzelpfropf' | ragenix --rules ./secrets-plugin.nix --editor - --edit unencrypted.age
-
-                # Decrypt with rage
-                decrypted="$(PATH="${pluginsSearchPath}:$PATH" rage -i '${./example/keys/example_plugin_key.txt}' -d unencrypted.age)"
-                if [[ "$decrypted" != "wurzelpfropf" ]]; then
-                  echo 'Unexpected value for decryption with plugin'
-                  exit 1
-                fi
-
-                # Rekey
-                ragenix --rules ./secrets-plugin.nix -i '${./example/keys/example_plugin_key.txt}' --rekey
-
-                mkdir $out # success
-              '';
-
           # `nix develop`
           devShell = pkgs.mkShell {
             name = "${name}-dev-shell";
@@ -366,6 +295,77 @@
               )
             '';
           };
+
+        checks.tests-recursive-nix = self.packages.${pkgs.system}.${name}.overrideAttrs (oldAttrs: {
+          name = "tests-recursive-nix";
+          cargoCheckFeatures = [ "recursive-nix" ];
+          requiredSystemFeatures = [ "recursive-nix" ];
+          checkInputs = [ pkgs.nixFlakes ];
+          # No need to run the formatting checks again
+          codeStyleConformanceCheck = "true";
+        });
+
+        checks.rekey = pkgs.runCommand "run-rekey"
+          {
+            buildInputs = [ pkgs.nixFlakes ];
+            requiredSystemFeatures = [ "recursive-nix" ];
+          }
+          ''
+            set -euo pipefail
+            cp -r '${./.}/example/.' "$TMPDIR"
+            chmod 600 *.age
+            cd "$TMPDIR"
+
+            ln -s "${./example/keys}" "$TMPDIR/.ssh"
+            export HOME="$TMPDIR"
+
+            ${pkgs.ragenix}/bin/ragenix --rekey
+            ${pkgs.agenix}/bin/agenix   --rekey
+
+            mkdir "$out"
+          '';
+
+        checks.age-plugin =
+          let
+            rageExamplePlugin = pkgs.rage.overrideAttrs (old: rec {
+              pname = "age-plugin-unencrypted";
+              doCheck = false;
+              cargoBuildFlags = [ "--example" pname ];
+              installPhase = ''
+                set -euo pipefail
+                find target/**/release/examples -name ${pname} \
+                  -exec install -D {} $out/bin/${pname} \;
+              '';
+            });
+            plugins = [ rageExamplePlugin ];
+            ragenixWithPlugins = pkgs.ragenix.override { inherit plugins; };
+            pluginsSearchPath = lib.strings.makeBinPath plugins;
+          in
+          pkgs.runCommand "age-plugin"
+            {
+              buildInputs = with pkgs; [ nixFlakes rage ragenixWithPlugins ];
+              requiredSystemFeatures = [ "recursive-nix" ];
+            }
+            ''
+              set -euo pipefail
+              cp -r '${./.}/example/.' "$TMPDIR"
+              cd "$TMPDIR"
+
+              # Encrypt with ragenix
+              echo 'wurzelpfropf' | ragenix --rules ./secrets-plugin.nix --editor - --edit unencrypted.age
+
+              # Decrypt with rage
+              decrypted="$(PATH="${pluginsSearchPath}:$PATH" rage -i '${./example/keys/example_plugin_key.txt}' -d unencrypted.age)"
+              if [[ "$decrypted" != "wurzelpfropf" ]]; then
+                echo 'Unexpected value for decryption with plugin'
+                exit 1
+              fi
+
+              # Rekey
+              ragenix --rules ./secrets-plugin.nix -i '${./example/keys/example_plugin_key.txt}' --rekey
+
+              mkdir $out # success
+            '';
       })
       )
       #
