@@ -115,7 +115,7 @@ pub(crate) fn get_identities(identity_paths: &[String]) -> Result<Vec<Box<dyn ag
     if identities.is_empty() {
         Err(eyre!("No usable identity or identities"))
     } else {
-        age::cli_common::read_identities(identities, |s| eyre!(s), |s, e| eyre!("{}: {:?}", s, e))
+        Ok(age::cli_common::read_identities(identities, None)?)
     }
 }
 
