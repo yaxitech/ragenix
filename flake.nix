@@ -28,9 +28,10 @@
       # Recursively merge a list of attribute sets. Following elements take
       # precedence over previous elements if they have conflicting keys.
       recursiveMerge = with lib; foldl recursiveUpdate { };
+      eachSystem = systems: f: flake-utils.lib.eachSystem systems (system: f (pkgsFor system));
       defaultSystems = flake-utils.lib.defaultSystems;
-      eachDefaultSystem = flake-utils.lib.eachSystem (defaultSystems);
-      eachLinuxSystem = flake-utils.lib.eachSystem (lib.filter (lib.hasSuffix "-linux") flake-utils.lib.defaultSystems);
+      eachDefaultSystem = eachSystem defaultSystems;
+      eachLinuxSystem = eachSystem (lib.filter (lib.hasSuffix "-linux") flake-utils.lib.defaultSystems);
 
       pkgsFor = system: import nixpkgs {
         inherit system;
@@ -41,10 +42,8 @@
       #
       # COMMON OUTPUTS FOR ALL SYSTEMS
       #
-      (eachDefaultSystem (system:
+      (eachDefaultSystem (pkgs:
         let
-          pkgs = pkgsFor system;
-
           rust = pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain;
 
           buildRustPackage = (pkgs.makeRustPlatform {
@@ -330,10 +329,10 @@
       #
       # CHECKS SPECIFIC TO LINUX SYSTEMS
       #
-      (eachLinuxSystem (system: {
+      (eachLinuxSystem (pkgs: {
         checks.nixos-module =
           let
-            pythonTest = import ("${nixpkgs}/nixos/lib/testing-python.nix") { inherit system; };
+            pythonTest = import ("${nixpkgs}/nixos/lib/testing-python.nix") { inherit (pkgs) system; };
             secretsConfig = import ./example/secrets-configuration.nix;
             secretPath = "/run/agenix/github-runner.token";
             ageIdentitiesConfig = { lib, ... }: {
