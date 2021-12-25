@@ -80,9 +80,10 @@
             preBuildPhases = [ "codeStyleConformanceCheck" ];
 
             codeStyleConformanceCheck = ''
-              export PATH="${rust}/bin:$PATH";
-              # rustfmt
+              header "Checking Rust code formatting"
               cargo fmt -- --check
+
+              header "Running clippy"
               # clippy - use same checkType as check-phase to avoid double building
               if [ "''${cargoCheckType}" != "debug" ]; then
                   cargoCheckProfileFlag="--''${cargoCheckType}"
@@ -92,19 +93,17 @@
                  $argstr -- \
                  -D clippy::pedantic \
                  -D warnings
-
             '';
 
-            # buildDeps
+            # build dependencies
             nativeBuildInputs = with pkgs; [
               pkg-config
               installShellFiles
-              nixFlakes
             ] ++ lib.optionals (plugins != [ ]) [
               makeWrapper
             ];
 
-            # runtimeDeps
+            # runtime dependencies
             buildInputs = with pkgs; [
               openssl
               nixFlakes
@@ -113,10 +112,10 @@
               darwin.Security
             ] ++ plugins;
 
+            # Run the tests without the "recursive-nix" feature to allow
+            # building the package without having a recursive-nix-enabled Nix.
+            checkNoDefaultFeatures = true;
             doCheck = true;
-
-            # for some tests
-            requiredSystemFeatures = lib.optionals (!pkgs.stdenv.isDarwin && doCheck) [ "recursive-nix" ];
 
             postInstall = ''
               set -euo pipefail
@@ -156,10 +155,19 @@
             mkdir $out #sucess
           '';
 
+          checks.tests-recursive-nix = packages.${name}.overrideAttrs (oldAttrs: {
+            name = "tests-recursive-nix";
+            cargoCheckFeatures = [ "recursive-nix" ];
+            requiredSystemFeatures = [ "recursive-nix" ];
+            checkInputs = [ pkgs.nixFlakes ];
+            # No need to run the formatting checks again
+            codeStyleConformanceCheck = "true";
+          });
+
           checks.rekey = pkgs.runCommand "run-rekey"
             {
               buildInputs = [ pkgs.nixFlakes ];
-              requiredSystemFeatures = lib.optionals (!pkgs.stdenv.isDarwin) [ "recursive-nix" ];
+              requiredSystemFeatures = [ "recursive-nix" ];
             }
             ''
               set -euo pipefail

@@ -5,6 +5,11 @@ version = "0.1.0"
 authors = ["Vincent Haupert <vincent@yaxi.tech>"]
 edition = "2021"
 
+[features]
+default = [ "recursive-nix" ]
+# Run tests which require a system with `recursive-nix` conditionally
+recursive-nix = []
+
 [dependencies]
 age = { version = "^0.7", default-features = false, features = [ "cli-common", "ssh", "armor", "plugin" ] }
 clap = { version = "3.0.0-rc.7", features = [ "cargo", "env" ] }
