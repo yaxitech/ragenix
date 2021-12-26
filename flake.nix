@@ -77,11 +77,7 @@
               find target/**/release/examples -name age-plugin-unencrypted -exec cp {} $out/bin/age-plugin-unencrypted \;
             '';
           });
-
-        in
-        rec {
-          # `nix build`
-          packages.${name} = buildRustPackage rec {
+          ragenix-derivation = { plugins ? [ ] }: buildRustPackage rec {
             pname = name;
             version = cargoTOML.package.version;
             src = filterRustSource ./.;
@@ -120,7 +116,7 @@
             ] ++ lib.optionals stdenv.isDarwin [
               libiconv
               darwin.Security
-            ];
+            ] ++ plugins;
 
             doCheck = true;
 
@@ -140,8 +136,18 @@
               installShellCompletion --bash "$(grep -oP 'RAGENIX_COMPLETIONS_BASH=\K.*' $buildOut)"
               installShellCompletion --zsh  "$(grep -oP 'RAGENIX_COMPLETIONS_ZSH=\K.*' $buildOut)"
               installShellCompletion --fish "$(grep -oP 'RAGENIX_COMPLETIONS_FISH=\K.*' $buildOut)"
+
+              # Symlink the plugins
+              for plugin in "${builtins.concatStringsSep " " plugins}"; do
+                ln -sf $plugin/bin/* $out/bin/
+              done
             '';
           };
+
+        in
+        rec {
+          # `nix build`
+          packages.${name} = pkgs.callPackage ragenix-derivation { };
           defaultPackage = packages.${name};
 
           # `nix run`
