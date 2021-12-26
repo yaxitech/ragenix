@@ -24,6 +24,7 @@ let
             pathWithoutPrefix == "/.gitignore" ||
             pathWithoutPrefix == "/LICENSE" ||
             pathWithoutPrefix == "/README.md" ||
+            pathWithoutPrefix == "/example/keys//README.md" ||
             pathWithoutPrefix == "/flake.lock" ||
             pathWithoutPrefix == "/flake.nix"
           );

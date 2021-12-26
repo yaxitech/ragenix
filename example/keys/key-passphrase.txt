@@ -1,0 +1,14 @@
+-----BEGIN AGE ENCRYPTED FILE-----
+YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IHNjcnlwdCBsSDVUVW1pdVZ4ZVpWYjMv
+ZFBXNm1RIDE5CmdVK29NRE1IQkl4VXAzNkJoZFBzVDh4TDFnWUNDOWFXYjhKZitW
+cEVVVnMKLS0tIEdFN1lua3llSXB5emswU3h4NzhtU1ZVaUlxY3RrREVEbHRidjFn
+VVZIb0kKulZrFziTqoJfh0KWIGliXwFminPAgj6O3JaNXexqITvoIkI+huon9zPO
+gUWzigXILa5rBkhSAyn+lr+aOh92Uz8DbKNUOj8MrWZaeHPem7/SnxoIrBvm5DLI
+XPCq3sufCcU6Tv5p3JCYIJPwznpOTDwa2OZsoKcWaw5WwY+zkwSTEhGcS6zF6Z1H
++K/fr38TQuLlMEmu1uNOdv3BGWEduGaaVPEuEZlPsOJgJwtho+5+IzNMKUmi5aRd
+RmyLxrsOPL+ZGgI1deZzri93EwoQwkYVI5TlvyF5hjhTuSk=
+-----END AGE ENCRYPTED FILE-----
+
+# bash -c 'rage -a -p -o key-passphrase.txt <(rage-keygen)'
+# passphrase: wurzelpfropf!
+# public key: age13ywr96petv44uhl2q8uvn60q0uumpts7u6flceutdhh95mw0edkse2ecs3
