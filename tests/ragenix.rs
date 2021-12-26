@@ -269,6 +269,34 @@ fn rekeying_works() -> Result<()> {
 
 #[test]
 #[cfg_attr(not(feature = "recursive-nix"), ignore)]
+fn rekeying_works_passphrase() -> Result<()> {
+    let (_dir, path) = copy_example_to_tmpdir()?;
+
+    let files = &["github-runner.token.age"];
+    let expected = files
+        .iter()
+        .map(|s| path.join(s))
+        .map(|p| format!("Rekeying {}", p.display()))
+        .collect::<Vec<String>>()
+        .join("\n")
+        + "\n";
+
+    let mut cmd = Command::cargo_bin(crate_name!())?;
+    let assert = cmd
+        .current_dir(&path)
+        .arg("--rekey")
+        .arg("--identity")
+        .arg("keys/key-passphrase.txt")
+        .write_stdin("\nwurzelpfropf!")
+        .assert();
+
+    assert.success().stdout(expected);
+
+    Ok(())
+}
+
+#[test]
+#[cfg_attr(not(feature = "recursive-nix"), ignore)]
 fn rekeying_ignores_not_existing_files() -> Result<()> {
     let (_dir, path) = copy_example_to_tmpdir()?;
 
