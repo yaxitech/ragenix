@@ -8,6 +8,19 @@ use clap_generate::{
 include!("src/cli.rs");
 
 fn main() -> Result<(), Error> {
+    // Read path to the `nix` binary from the environment
+    let nix_bin_path = match env::var("RAGENIX_NIX_BIN_PATH") {
+        Err(_) => {
+            println!(
+                "cargo:warning=Environment variable RAGENIX_NIX_BIN_PATH not given, using 'nix'"
+            );
+            "nix".to_string()
+        }
+        Ok(val) => val,
+    };
+    println!("cargo:rustc-env=RAGENIX_NIX_BIN_PATH={}", nix_bin_path);
+
+    // Make the paths to the shell completion files available as environment variables
     let outdir = match env::var_os("OUT_DIR") {
         None => return Ok(()),
         Some(outdir) => outdir,
