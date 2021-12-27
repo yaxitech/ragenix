@@ -71,13 +71,15 @@ OPTIONS:
 
 The `ragenix` package also provides shell completions for `bash`, `zsh`, and `fish`. Make sure to install the package with either `nix profile install github:yaxitech/ragenix`, `environment.systemPackages` on NixOS or `home.packages` for home-manager.
 
-## Plugin Support (i.e. YubiKey)
+## Plugin Support
 
-With the release of [`rage`](https://github.com/str4d/rage) v0.6.0 a plugin system was introduced. Using this plugin system rage supports identities and recipients from third-parties such as the [`age-plugin-yubikey`](https://github.com/str4d/age-plugin-yubikey). Ragenix also supports this by offering a `plugins` argument which can be overriden to add your plugins:
+With the release of [`rage`](https://github.com/str4d/rage) v0.6.0 a plugin system was introduced. Using this plugin system `rage` supports identities and recipients from third-parties such as the [`age-plugin-yubikey`](https://github.com/str4d/age-plugin-yubikey). `ragenix` also supports this by offering a `plugins` argument which can be overriden to add your plugins:
+
 ```nix
 ragenix.override { plugins = [ age-plugin-yubikey ]; }
 ```
-Alternatively, add your plugin to `$PATH` so that `ragenix` can find it. 
+
+Alternatively, add your plugins to `$PATH` so that `ragenix` (and `rage`) can find it.
 
 ## Contributions
 
