@@ -70,7 +70,7 @@
             };
           };
 
-          ragenix-derivation = { plugins ? [ ] }: buildRustPackage rec {
+          ragenix = { plugins ? [ ] }: buildRustPackage rec {
             pname = name;
             version = cargoTOML.package.version;
             src = filterRustSource ./.;
@@ -100,6 +100,8 @@
               pkg-config
               installShellFiles
               nixFlakes
+            ] ++ lib.optionals (plugins != [ ]) [
+              makeWrapper
             ];
 
             # runtimeDeps
@@ -129,18 +131,17 @@
               installShellCompletion --bash "$(grep -oP 'RAGENIX_COMPLETIONS_BASH=\K.*' $buildOut)"
               installShellCompletion --zsh  "$(grep -oP 'RAGENIX_COMPLETIONS_ZSH=\K.*' $buildOut)"
               installShellCompletion --fish "$(grep -oP 'RAGENIX_COMPLETIONS_FISH=\K.*' $buildOut)"
+            '';
 
-              # Symlink the plugins
-              for plugin in "${builtins.concatStringsSep " " plugins}"; do
-                ln -sf $plugin/bin/* $out/bin/
-              done
+            # Make the plugins available in ragenix' PATH
+            postFixup = lib.optionalString (plugins != [ ]) ''
+              wrapProgram "$out/bin/ragenix" --prefix PATH : ${lib.strings.makeBinPath plugins}
             '';
           };
-
         in
         rec {
           # `nix build`
-          packages.${name} = pkgs.callPackage ragenix-derivation { };
+          packages.${name} = pkgs.callPackage ragenix { };
           defaultPackage = packages.${name};
 
           # `nix run`
@@ -269,10 +270,13 @@
                     -exec install -D {} $out/bin/${pname} \;
                 '';
               });
+              plugins = [ rageExamplePlugin ];
+              ragenixWithPlugins = pkgs.ragenix.override { inherit plugins; };
+              pluginsSearchPath = lib.strings.makeBinPath plugins;
             in
             pkgs.runCommand "age-plugin"
               {
-                buildInputs = [ pkgs.nixFlakes rageExamplePlugin ];
+                buildInputs = with pkgs; [ nixFlakes rage ragenixWithPlugins ];
                 requiredSystemFeatures = lib.optionals (!pkgs.stdenv.isDarwin) [ "recursive-nix" ];
               }
               ''
@@ -281,18 +285,17 @@
                 cd "$TMPDIR"
 
                 # Encrypt with ragenix
-                echo 'wurzelpfropf' | ${pkgs.ragenix}/bin/ragenix --rules ./secrets-plugin.nix \
-                  --editor - --edit unencrypted.age
+                echo 'wurzelpfropf' | ragenix --rules ./secrets-plugin.nix --editor - --edit unencrypted.age
 
                 # Decrypt with rage
-                decrypted="$(${pkgs.rage}/bin/rage -i '${./example/keys/example_plugin_key.txt}' -d unencrypted.age)"
+                decrypted="$(PATH="${pluginsSearchPath}:$PATH" rage -i '${./example/keys/example_plugin_key.txt}' -d unencrypted.age)"
                 if [[ "$decrypted" != "wurzelpfropf" ]]; then
                   echo 'Unexpected value for decryption with plugin'
                   exit 1
                 fi
 
                 # Rekey
-                ${pkgs.ragenix}/bin/ragenix --rules ./secrets-plugin.nix -i '${./example/keys/example_plugin_key.txt}' --rekey
+                ragenix --rules ./secrets-plugin.nix -i '${./example/keys/example_plugin_key.txt}' --rekey
 
                 mkdir $out # success
               '';
