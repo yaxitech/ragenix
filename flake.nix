@@ -69,10 +69,8 @@
                   );
             };
           };
-        in
-        rec {
-          # `nix build`
-          packages.${name} = buildRustPackage rec {
+
+          ragenix = { plugins ? [ ] }: buildRustPackage rec {
             pname = name;
             version = cargoTOML.package.version;
             src = filterRustSource ./.;
@@ -102,6 +100,8 @@
               pkg-config
               installShellFiles
               nixFlakes
+            ] ++ lib.optionals (plugins != [ ]) [
+              makeWrapper
             ];
 
             # runtimeDeps
@@ -111,7 +111,7 @@
             ] ++ lib.optionals stdenv.isDarwin [
               libiconv
               darwin.Security
-            ];
+            ] ++ plugins;
 
             doCheck = true;
 
@@ -132,7 +132,16 @@
               installShellCompletion --zsh  "$(grep -oP 'RAGENIX_COMPLETIONS_ZSH=\K.*' $buildOut)"
               installShellCompletion --fish "$(grep -oP 'RAGENIX_COMPLETIONS_FISH=\K.*' $buildOut)"
             '';
+
+            # Make the plugins available in ragenix' PATH
+            postFixup = lib.optionalString (plugins != [ ]) ''
+              wrapProgram "$out/bin/ragenix" --prefix PATH : ${lib.strings.makeBinPath plugins}
+            '';
           };
+        in
+        rec {
+          # `nix build`
+          packages.${name} = pkgs.callPackage ragenix { };
           defaultPackage = packages.${name};
 
           # `nix run`
@@ -248,6 +257,48 @@
             echo 'All metadata checks completed successfully'
             mkdir $out # success
           '';
+
+          checks.age-plugin =
+            let
+              rageExamplePlugin = pkgs.rage.overrideAttrs (old: rec {
+                pname = "age-plugin-unencrypted";
+                doCheck = false;
+                cargoBuildFlags = [ "--example" pname ];
+                installPhase = ''
+                  set -euo pipefail
+                  find target/**/release/examples -name ${pname} \
+                    -exec install -D {} $out/bin/${pname} \;
+                '';
+              });
+              plugins = [ rageExamplePlugin ];
+              ragenixWithPlugins = pkgs.ragenix.override { inherit plugins; };
+              pluginsSearchPath = lib.strings.makeBinPath plugins;
+            in
+            pkgs.runCommand "age-plugin"
+              {
+                buildInputs = with pkgs; [ nixFlakes rage ragenixWithPlugins ];
+                requiredSystemFeatures = lib.optionals (!pkgs.stdenv.isDarwin) [ "recursive-nix" ];
+              }
+              ''
+                set -euo pipefail
+                cp -r '${./.}/example/.' "$TMPDIR"
+                cd "$TMPDIR"
+
+                # Encrypt with ragenix
+                echo 'wurzelpfropf' | ragenix --rules ./secrets-plugin.nix --editor - --edit unencrypted.age
+
+                # Decrypt with rage
+                decrypted="$(PATH="${pluginsSearchPath}:$PATH" rage -i '${./example/keys/example_plugin_key.txt}' -d unencrypted.age)"
+                if [[ "$decrypted" != "wurzelpfropf" ]]; then
+                  echo 'Unexpected value for decryption with plugin'
+                  exit 1
+                fi
+
+                # Rekey
+                ragenix --rules ./secrets-plugin.nix -i '${./example/keys/example_plugin_key.txt}' --rekey
+
+                mkdir $out # success
+              '';
 
           # `nix develop`
           devShell = pkgs.mkShell {

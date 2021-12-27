@@ -417,7 +417,7 @@ fn fails_for_invalid_recipient() -> Result<()> {
             invalid_key
         )))
         .stderr(predicate::str::contains(
-            "Make sure you use an ssh-ed25519, ssh-rsa or an X25519 public key",
+            "Make sure you use an ssh-ed25519, ssh-rsa or an X25519 public key, alternatively install an age plugin which supports your key",
         ));
 
     Ok(())

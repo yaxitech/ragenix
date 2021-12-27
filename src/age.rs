@@ -38,16 +38,23 @@ fn get_age_decryptor<P: AsRef<Path>>(
 /// Parses a recipient from a string.
 /// [Copied from str4d/rage (ASL-2.0)](
 /// https://github.com/str4d/rage/blob/85c0788dc511f1410b4c1811be6b8904d91f85db/rage/src/bin/rage/main.rs)
-fn parse_recipient(s: &str, recipients: &mut Vec<Box<dyn age::Recipient>>) -> Result<()> {
+fn parse_recipient(
+    s: &str,
+    recipients: &mut Vec<Box<dyn age::Recipient>>,
+    plugin_recipients: &mut Vec<age::plugin::Recipient>,
+) -> Result<()> {
     if let Ok(pk) = s.parse::<age::x25519::Recipient>() {
         recipients.push(Box::new(pk));
         Ok(())
     } else if let Some(pk) = { s.parse::<age::ssh::Recipient>().ok().map(Box::new) } {
         recipients.push(pk);
         Ok(())
+    } else if let Ok(pk) = s.parse::<age::plugin::Recipient>() {
+        plugin_recipients.push(pk);
+        Ok(())
     } else {
         Err(eyre!("Invalid recipient: {}", s))
-            .with_suggestion(|| "Make sure you use an ssh-ed25519, ssh-rsa or an X25519 public key")
+            .with_suggestion(|| "Make sure you use an ssh-ed25519, ssh-rsa or an X25519 public key, alternatively install an age plugin which supports your key")
     }
 }
 
@@ -69,6 +76,33 @@ fn get_default_identity_paths() -> Result<Vec<String>> {
     Ok(filtered_paths)
 }
 
+/// Searches plugins and transforms `age::plugin::Recipient` to `age::Recipients`
+fn merge_plugin_recipients_and_recipients(
+    recipients: &mut Vec<Box<dyn age::Recipient>>,
+    plugin_recipients: &[age::plugin::Recipient],
+) -> Result<()> {
+    // Get names of all required plugins from the recipients
+    let mut plugin_names = plugin_recipients
+        .iter()
+        .map(age::plugin::Recipient::plugin)
+        .collect::<Vec<_>>();
+    plugin_names.sort_unstable();
+    plugin_names.dedup();
+
+    // Add to recipients
+    for plugin_name in plugin_names {
+        recipients.push(Box::new(age::plugin::RecipientPluginV1::new(
+            plugin_name,
+            plugin_recipients,
+            // Rage allows for symmetric encryption, but this is not actually something which fits
+            // into ragenix's design
+            &Vec::<age::plugin::Identity>::new(),
+            age::cli_common::UiCallbacks,
+        )?));
+    }
+    Ok(())
+}
+
 /// Get all the identities from the given paths and the default locations.
 ///
 /// Default locations are `$HOME/.ssh/id_rsa` and `$HOME/.ssh/id_ed25519`.
@@ -81,7 +115,7 @@ pub(crate) fn get_identities(identity_paths: &[String]) -> Result<Vec<Box<dyn ag
     if identities.is_empty() {
         Err(eyre!("No usable identity or identities"))
     } else {
-        age::cli_common::read_identities(identities, |s| eyre!(s), |s, e| eyre!("{}: {:?}", s, e))
+        Ok(age::cli_common::read_identities(identities, None)?)
     }
 }
 
@@ -129,9 +163,14 @@ pub(crate) fn encrypt<P: AsRef<Path>>(
     )?;
 
     let mut recipients: Vec<Box<dyn age::Recipient>> = vec![];
+    let mut plugin_recipients: Vec<age::plugin::Recipient> = vec![];
+
     for pubkey in public_keys {
-        parse_recipient(pubkey, &mut recipients)?;
+        parse_recipient(pubkey, &mut recipients, &mut plugin_recipients)?;
     }
+
+    merge_plugin_recipients_and_recipients(&mut recipients, &plugin_recipients)?;
+
     let encryptor = age::Encryptor::with_recipients(recipients);
 
     let mut output = encryptor
@@ -159,8 +198,10 @@ pub(crate) fn rekey<P: AsRef<Path>>(
     public_keys: &[String],
 ) -> Result<()> {
     let mut recipients: Vec<Box<dyn age::Recipient>> = vec![];
+    let mut plugin_recipients: Vec<age::plugin::Recipient> = vec![];
+
     for pubkey in public_keys {
-        parse_recipient(pubkey, &mut recipients)?;
+        parse_recipient(pubkey, &mut recipients, &mut plugin_recipients)?;
     }
     let decryptor = get_age_decryptor(&file)?;
     decryptor
@@ -169,6 +210,9 @@ pub(crate) fn rekey<P: AsRef<Path>>(
         .and_then(|mut plaintext_reader| {
             // Create a temporary file to write the re-encrypted data to
             let outfile = NamedTempFile::new()?;
+
+            // Merge plugin recipients
+            merge_plugin_recipients_and_recipients(&mut recipients, &plugin_recipients)?;
 
             // Create an encryptor for the (new) recipients to encrypt the file for
             let encryptor = age::Encryptor::with_recipients(recipients);
