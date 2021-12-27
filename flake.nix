@@ -45,103 +45,15 @@
       (eachDefaultSystem (pkgs:
         let
           rust = pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain;
-
-          buildRustPackage = (pkgs.makeRustPlatform {
-            cargo = rust;
-            rustc = rust;
-          }).buildRustPackage;
-
-          # Filter out VCS files and files unrelated to the Rust ragenix package
-          filterRustSource = src: with lib; cleanSourceWith {
-            filter = cleanSourceFilter;
-            src = cleanSourceWith {
-              inherit src;
-              filter = name: type:
-                let pathWithoutPrefix = removePrefix (toString src) name; in
-                  ! (
-                    hasPrefix "/.github" pathWithoutPrefix ||
-                    pathWithoutPrefix == "/.gitignore" ||
-                    pathWithoutPrefix == "/LICENSE" ||
-                    pathWithoutPrefix == "/README.md" ||
-                    pathWithoutPrefix == "/flake.lock" ||
-                    pathWithoutPrefix == "/flake.nix"
-                  );
-            };
-          };
-
-          ragenix = { plugins ? [ ] }: buildRustPackage rec {
-            pname = name;
-            version = cargoTOML.package.version;
-            src = filterRustSource ./.;
-
-            cargoLock.lockFile = ./Cargo.lock;
-
-            preBuildPhases = [ "codeStyleConformanceCheck" ];
-
-            codeStyleConformanceCheck = ''
-              header "Checking Rust code formatting"
-              cargo fmt -- --check
-
-              header "Running clippy"
-              # clippy - use same checkType as check-phase to avoid double building
-              if [ "''${cargoCheckType}" != "debug" ]; then
-                  cargoCheckProfileFlag="--''${cargoCheckType}"
-              fi
-              argstr="''${cargoCheckProfileFlag} --workspace --all-features --tests "
-              cargo clippy -j $NIX_BUILD_CORES \
-                 $argstr -- \
-                 -D clippy::pedantic \
-                 -D warnings
-            '';
-
-            # build dependencies
-            nativeBuildInputs = with pkgs; [
-              pkg-config
-              installShellFiles
-            ] ++ lib.optionals (plugins != [ ]) [
-              makeWrapper
-            ];
-
-            # runtime dependencies
-            buildInputs = with pkgs; [
-              openssl
-            ] ++ lib.optionals stdenv.isDarwin [
-              libiconv
-              darwin.Security
-            ];
-
-            # Absolute path to the `nix` binary, used in `build.rs`
-            RAGENIX_NIX_BIN_PATH = "${pkgs.nixFlakes}/bin/nix";
-
-            # Run the tests without the "recursive-nix" feature to allow
-            # building the package without having a recursive-nix-enabled Nix.
-            checkNoDefaultFeatures = true;
-            doCheck = true;
-
-            postInstall = ''
-              set -euo pipefail
-
-              # Provide a symlink from `agenix` to `ragenix` for compat
-              ln -sr "$out/bin/ragenix" "$out/bin/agenix"
-
-              # Stdout of build.rs
-              buildOut=$(find "$tmpDir/build" -type f -regex ".*\/ragenix-[a-z0-9]+\/output")
-
-              set +u # required due to `installShellCompletion`'s implementation
-              installShellCompletion --bash "$(grep -oP 'RAGENIX_COMPLETIONS_BASH=\K.*' $buildOut)"
-              installShellCompletion --zsh  "$(grep -oP 'RAGENIX_COMPLETIONS_ZSH=\K.*' $buildOut)"
-              installShellCompletion --fish "$(grep -oP 'RAGENIX_COMPLETIONS_FISH=\K.*' $buildOut)"
-            '';
-
-            # Make the plugins available in ragenix' PATH
-            postFixup = lib.optionalString (plugins != [ ]) ''
-              wrapProgram "$out/bin/ragenix" --prefix PATH : ${lib.strings.makeBinPath plugins}
-            '';
-          };
         in
         rec {
           # `nix build`
-          packages.${name} = pkgs.callPackage ragenix { };
+          packages.${name} = pkgs.callPackage ./default.nix {
+            rustPlatform = pkgs.makeRustPlatform {
+              cargo = rust;
+              rustc = rust;
+            };
+          };
           defaultPackage = packages.${name};
 
           # `nix run`
@@ -249,7 +161,7 @@
               darwin.Security
             ];
 
-            RAGENIX_NIX_BIN_PATH = "${pkgs.nix}/bin/nix";
+            RAGENIX_NIX_BIN_PATH = "${pkgs.nixFlakes}/bin/nix";
 
             RUST_SRC_PATH = "${rust}/lib/rustlib/src/rust/library";
 
@@ -300,18 +212,16 @@
             '';
           };
 
-        checks.tests-recursive-nix = self.packages.${pkgs.system}.${name}.overrideAttrs (oldAttrs: {
+        checks.tests-recursive-nix = pkgs.ragenix.overrideAttrs (oldAttrs: {
           name = "tests-recursive-nix";
           cargoCheckFeatures = [ "recursive-nix" ];
           requiredSystemFeatures = [ "recursive-nix" ];
-          checkInputs = [ pkgs.nixFlakes ];
           # No need to run the formatting checks again
           codeStyleConformanceCheck = "true";
         });
 
         checks.rekey = pkgs.runCommand "run-rekey"
           {
-            buildInputs = [ pkgs.nixFlakes ];
             requiredSystemFeatures = [ "recursive-nix" ];
           }
           ''
@@ -347,7 +257,7 @@
           in
           pkgs.runCommand "age-plugin"
             {
-              buildInputs = with pkgs; [ nixFlakes rage ragenixWithPlugins ];
+              buildInputs = [ pkgs.rage ragenixWithPlugins ];
               requiredSystemFeatures = [ "recursive-nix" ];
             }
             ''
