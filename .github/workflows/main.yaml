@@ -6,31 +6,51 @@ on:
   push:
     branches:
       - main
+
 jobs:
-  check:
-    env:
-      GC_DONT_GC: 1
-    name: 'Check and build'
+  build:
+    name: 'Build'
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v2
-      - name: Install Nix
-        uses: cachix/install-nix-action@v15
+      - name: 'Checkout source'
+        uses: actions/checkout@v2
+      - name: 'Install Nix Flakes'
+        uses: cachix/install-nix-action@v16
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+      - name: 'Setup Cachix'
+        uses: cachix/cachix-action@v10
+        with:
+          name: wurzelpfropf
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN_PUBLIC }}'
+      - name: 'Build default package'
+        run: nix build -L .
+
+  check:
+    name: 'Check'
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: 'Checkout source'
+        uses: actions/checkout@v2
+      - name: 'Install Nix Flakes (nixos-test, recursive-nix)'
+        uses: cachix/install-nix-action@v16
         with:
           extra_nix_config: |
             experimental-features = nix-command flakes recursive-nix
             system-features = nixos-test benchmark big-parallel kvm recursive-nix
-      - name: Setup Cachix
+      - name: 'Setup Cachix'
         uses: cachix/cachix-action@v10
         with:
           name: wurzelpfropf
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN_PUBLIC }}'
       - name: 'Check flake evaluates'
         run: nix flake check --no-build .
-      - name: 'Run checks'
+      - name: 'Run all checks'
         run: nix flake check -L .
-      - name: 'Build package'
-        run: nix build -L .

@@ -23,6 +23,7 @@ fn copy_example_to_tmpdir() -> Result<(TempDir, PathBuf)> {
 }
 
 #[test]
+#[cfg_attr(not(feature = "recursive-nix"), ignore)]
 fn edit_no_rekey_if_unchanged() -> Result<()> {
     let (_dir, path) = copy_example_to_tmpdir()?;
 
@@ -49,6 +50,7 @@ fn edit_no_rekey_if_unchanged() -> Result<()> {
 }
 
 #[test]
+#[cfg_attr(not(feature = "recursive-nix"), ignore)]
 fn edit_works() -> Result<()> {
     let (_dir, path) = copy_example_to_tmpdir()?;
 
@@ -70,12 +72,13 @@ fn edit_works() -> Result<()> {
 }
 
 #[test]
+#[cfg_attr(not(feature = "recursive-nix"), ignore)]
 fn edit_new_entry() -> Result<()> {
     let dir = tempfile::tempdir()?;
     let dir_path = fs::canonicalize(dir.path())?;
     let rules = indoc! {r#"
     {
-        "pandora.age".publicKeys = [ 
+        "pandora.age".publicKeys = [
             "age1qjzezkeazfdg4p9x0kjapjtreyyt74pg34ftzfypcdpy7wgh6acqxeyvwt"
         ];
     }
@@ -104,6 +107,7 @@ fn edit_new_entry() -> Result<()> {
 }
 
 #[test]
+#[cfg_attr(not(feature = "recursive-nix"), ignore)]
 fn edit_new_entry_stdin() -> Result<()> {
     // # created: 2021-09-20T23:41:59+02:00
     // # public key: age1fjc9tyguvxfqh2ey2qqfc066g3gee7hlnhqn2g7yn4f6smymmsnq6xdn2t
@@ -113,7 +117,7 @@ fn edit_new_entry_stdin() -> Result<()> {
     let dir = tempfile::tempdir()?;
     let rules = indoc! {r#"
     {
-        "pandora.age".publicKeys = [ 
+        "pandora.age".publicKeys = [
             "age1fjc9tyguvxfqh2ey2qqfc066g3gee7hlnhqn2g7yn4f6smymmsnq6xdn2t"
         ];
     }
@@ -157,6 +161,7 @@ fn edit_new_entry_stdin() -> Result<()> {
 }
 
 #[test]
+#[cfg_attr(not(feature = "recursive-nix"), ignore)]
 fn edit_existing_entry_stdin() -> Result<()> {
     let plaintext = "secret wurzelpfropf";
 
@@ -193,6 +198,7 @@ fn edit_existing_entry_stdin() -> Result<()> {
 }
 
 #[test]
+#[cfg_attr(not(feature = "recursive-nix"), ignore)]
 fn edit_permissions_correct() -> Result<()> {
     let (_dir, path) = copy_example_to_tmpdir()?;
     let script = indoc! { r#"
@@ -235,6 +241,7 @@ fn edit_permissions_correct() -> Result<()> {
 }
 
 #[test]
+#[cfg_attr(not(feature = "recursive-nix"), ignore)]
 fn rekeying_works() -> Result<()> {
     let (_dir, path) = copy_example_to_tmpdir()?;
 
@@ -261,6 +268,7 @@ fn rekeying_works() -> Result<()> {
 }
 
 #[test]
+#[cfg_attr(not(feature = "recursive-nix"), ignore)]
 fn rekeying_ignores_not_existing_files() -> Result<()> {
     let (_dir, path) = copy_example_to_tmpdir()?;
 
@@ -284,6 +292,7 @@ fn rekeying_ignores_not_existing_files() -> Result<()> {
 }
 
 #[test]
+#[cfg_attr(not(feature = "recursive-nix"), ignore)]
 fn rekeying_works_default_identities() -> Result<()> {
     let (_dir, path) = copy_example_to_tmpdir()?;
 
@@ -310,6 +319,7 @@ fn rekeying_works_default_identities() -> Result<()> {
 }
 
 #[test]
+#[cfg_attr(not(feature = "recursive-nix"), ignore)]
 fn rekeying_fails_no_given_identites() -> Result<()> {
     let (_dir, path) = copy_example_to_tmpdir()?;
 
@@ -328,6 +338,7 @@ fn rekeying_fails_no_given_identites() -> Result<()> {
 }
 
 #[test]
+#[cfg_attr(not(feature = "recursive-nix"), ignore)]
 fn rekeying_fails_no_valid_identites() -> Result<()> {
     let (_dir, path) = copy_example_to_tmpdir()?;
     let ssh_dir = path.join(".ssh");
@@ -368,6 +379,7 @@ fn prints_schema() -> Result<()> {
 }
 
 #[test]
+#[cfg_attr(not(feature = "recursive-nix"), ignore)]
 fn rejects_invalid_rules() -> Result<()> {
     let (_dir, path) = copy_example_to_tmpdir()?;
 
@@ -391,6 +403,7 @@ fn rejects_invalid_rules() -> Result<()> {
 }
 
 #[test]
+#[cfg_attr(not(feature = "recursive-nix"), ignore)]
 fn fails_for_invalid_recipient() -> Result<()> {
     let dir = tempfile::tempdir()?;
     let invalid_key = "invalid-key abcdefghijklmnopqrstuvwxyz";
