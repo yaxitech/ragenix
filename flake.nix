@@ -105,11 +105,13 @@
             # runtime dependencies
             buildInputs = with pkgs; [
               openssl
-              nixFlakes
             ] ++ lib.optionals stdenv.isDarwin [
               libiconv
               darwin.Security
-            ] ++ plugins;
+            ];
+
+            # Absolute path to the `nix` binary, used in `build.rs`
+            RAGENIX_NIX_BIN_PATH = "${pkgs.nixFlakes}/bin/nix";
 
             # Run the tests without the "recursive-nix" feature to allow
             # building the package without having a recursive-nix-enabled Nix.
@@ -246,6 +248,8 @@
               libiconv
               darwin.Security
             ];
+
+            RAGENIX_NIX_BIN_PATH = "${pkgs.nix}/bin/nix";
 
             RUST_SRC_PATH = "${rust}/lib/rustlib/src/rust/library";
 

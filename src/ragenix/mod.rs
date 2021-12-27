@@ -26,7 +26,8 @@ lazy_static! {
 fn nix_rules_to_json<P: AsRef<Path>>(path: P) -> Result<serde_json::Value> {
     let rules_filepath = path.as_ref().to_string_lossy();
 
-    let output = process::Command::new("nix")
+    let nix_binary = env!("RAGENIX_NIX_BIN_PATH");
+    let output = process::Command::new(nix_binary)
         .arg("eval")
         .arg("--experimental-features")
         .arg("nix-command flakes")
