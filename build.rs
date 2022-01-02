@@ -1,8 +1,8 @@
 use std::{env, io::Error};
 
-use clap_generate::{
+use clap_complete::{
     generate_to,
-    generators::{Bash, Fish, Zsh},
+    Shell::{Bash, Fish, Zsh},
 };
 
 include!("src/cli.rs");
