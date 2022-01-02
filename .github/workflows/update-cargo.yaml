@@ -32,6 +32,9 @@ jobs:
           body: |
             Updated Cargo dependencies through `cargo update`.
 
+            [![dependency status](https://deps.rs/repo/github/yaxitech/ragenix/status.svg)
+            ](https://deps.rs/repo/github/yaxitech/ragenix)
+
       - name: Check outputs
         run: |
           echo "Pull Request Number - ${{ steps.cpr.outputs.pull-request-number }}"
