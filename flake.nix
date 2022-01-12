@@ -113,6 +113,10 @@
           checks.decrypt-with-age = pkgs.runCommand "decrypt-with-age" { } ''
             set -euo pipefail
 
+            # Required to prevent a panic in the locale_config crate
+            # https://github.com/yaxitech/ragenix/issues/76
+            ${lib.optionalString pkgs.stdenv.isDarwin ''export LANG="en_US.UTF-8"''}
+
             files=('${./example/root.passwd.age}' '${./example/github-runner.token.age}')
 
             for file in ''${files[@]}; do
