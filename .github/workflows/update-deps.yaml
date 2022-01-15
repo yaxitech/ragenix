@@ -19,10 +19,30 @@ jobs:
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
             experimental-features = nix-command flakes
 
-      - name: Configure Git
+      - name: Get user data of PAT
+        uses: actions/github-script@v5
+        id: pat-user
+        with:
+          github-token: ${{ secrets.PAT }}
+          script: |
+            const { data } = await github.request("/user");
+            if (data.email == null) {
+              data.email = `${data.login}@users.noreply.github.com`;
+            }
+            if (data.name == null) {
+              data.name = data.login;
+            }
+            console.log(data);
+            return data
+
+      - name: Configure Git with PAT user
         run: |
-          git config user.name '${{ github.actor }}'
-          git config user.email '${{ github.actor }}@users.noreply.github.com'
+          JSON='${{ steps.pat-user.outputs.result }}'
+          NAME="$(echo "$JSON"  | jq -r ".name")"
+          EMAIL="$(echo "$JSON" | jq -r ".email")"
+
+          git config user.name  "$NAME"
+          git config user.email "$EMAIL"
 
       - name: Update flake inputs and commit
         run: |
