@@ -1,0 +1,79 @@
+name: 'Update flake inputs & Cargo dependencies'
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 2 * * 0'
+
+jobs:
+  update-deps:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v15
+        with:
+          extra_nix_config: |
+            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+            experimental-features = nix-command flakes
+
+      - name: Get user data of PAT
+        uses: actions/github-script@v5
+        id: pat-user
+        with:
+          github-token: ${{ secrets.PAT }}
+          script: |
+            const { data } = await github.request("/user");
+            if (data.email == null) {
+              data.email = `${data.login}@users.noreply.github.com`;
+            }
+            if (data.name == null) {
+              data.name = data.login;
+            }
+            console.log(data);
+            return data
+
+      - name: Configure Git with PAT user
+        run: |
+          JSON='${{ steps.pat-user.outputs.result }}'
+          NAME="$(echo "$JSON"  | jq -r ".name")"
+          EMAIL="$(echo "$JSON" | jq -r ".email")"
+
+          git config user.name  "$NAME"
+          git config user.email "$EMAIL"
+
+      - name: Update flake inputs and commit
+        run: |
+          nix flake update --commit-lock-file
+
+      - name: Get flake metadata
+        id: flake-metadata
+        run: |
+          # The sed expression strips any control sequences (e.g., the bold text elements)
+          body="$(nix flake metadata | sed -E "s/[[:cntrl:]]\[[0-9]{1,3}m//g")"
+          # The following encoding is required to have proper multiline strings
+          # Also see: https://github.community/t/set-output-truncates-multiline-strings/16852/3
+          body="${body//'%'/'%25'}"
+          body="${body//$'\n'/'%0A'}"
+          body="${body//$'\r'/'%0D'}"
+          echo ::set-output name=body::$body
+
+      - name: Update Cargo dependencies and commit
+        run: |
+          . <(nix print-dev-env)
+          cargo update
+          git diff --quiet && git diff --staged --quiet || git commit -am 'Cargo.lock: Update'
+
+      - name: Create Pull Request
+        id: cpr
+        uses: peter-evans/create-pull-request@v3
+        with:
+          branch: flake-updates
+          token: ${{ secrets.PAT }}
+          title: Update flake inputs and Cargo dependencies
+          body: |
+            ```
+            ${{ steps.flake-metadata.outputs.body }}
+            ```
