@@ -1,4 +1,4 @@
-name: 'Update flakes'
+name: 'Update flake inputs & Cargo dependencies'
 
 on:
   workflow_dispatch:
@@ -6,24 +6,26 @@ on:
     - cron: '0 2 * * 0'
 
 jobs:
-  update-flakes:
+  update-deps:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2.3.4
+        uses: actions/checkout@v2
 
       - name: Install Nix
-        uses: cachix/install-nix-action@v14
+        uses: cachix/install-nix-action@v15
         with:
-          install_url: https://nixos-nix-install-tests.cachix.org/serve/vij683ly7sl95nnhb67bdjjfabclr85m/install
-          install_options: '--tarball-url-prefix https://nixos-nix-install-tests.cachix.org/serve'
           extra_nix_config: |
+            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
             experimental-features = nix-command flakes
 
-      - name: Update flake inputs
+      - name: Configure Git
         run: |
           git config user.name '${{ github.actor }}'
           git config user.email '${{ github.actor }}@users.noreply.github.com'
+
+      - name: Update flake inputs and commit
+        run: |
           nix flake update --commit-lock-file
 
       - name: Get flake metadata
@@ -38,19 +40,20 @@ jobs:
           body="${body//$'\r'/'%0D'}"
           echo ::set-output name=body::$body
 
+      - name: Update Cargo dependencies and commit
+        run: |
+          . <(nix print-dev-env)
+          cargo update
+          git diff --quiet && git diff --staged --quiet || git commit -am 'Cargo.lock: Update'
+
       - name: Create Pull Request
         id: cpr
         uses: peter-evans/create-pull-request@v3
         with:
           branch: flake-updates
           token: ${{ secrets.PAT }}
-          title: Update flake inputs
+          title: Update flake inputs and Cargo dependencies
           body: |
             ```
             ${{ steps.flake-metadata.outputs.body }}
             ```
-
-      - name: Check outputs
-        run: |
-          echo "Pull Request Number - ${{ steps.cpr.outputs.pull-request-number }}"
-          echo "Pull Request URL - ${{ steps.cpr.outputs.pull-request-url }}"
