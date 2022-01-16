@@ -70,7 +70,7 @@ jobs:
         id: cpr
         uses: peter-evans/create-pull-request@v3
         with:
-          branch: flake-updates
+          branch: update-deps
           token: ${{ secrets.PAT }}
           title: Update flake inputs and Cargo dependencies
           body: |
