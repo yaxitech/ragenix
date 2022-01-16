@@ -82,5 +82,6 @@ jobs:
 
             Updated Cargo dependencies through `cargo update`.
 
+            Dependency status of `main` prior to this PR:
             [![dependency status](https://deps.rs/repo/github/yaxitech/ragenix/status.svg)
             ](https://deps.rs/repo/github/yaxitech/ragenix)
