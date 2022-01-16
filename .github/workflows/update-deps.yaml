@@ -74,6 +74,13 @@ jobs:
           token: ${{ secrets.PAT }}
           title: Update flake inputs and Cargo dependencies
           body: |
+            Updated Flake dependencies through `nix flake update`.
+
             ```
             ${{ steps.flake-metadata.outputs.body }}
             ```
+
+            Updated Cargo dependencies through `cargo update`.
+
+            [![dependency status](https://deps.rs/repo/github/yaxitech/ragenix/status.svg)
+            ](https://deps.rs/repo/github/yaxitech/ragenix)
