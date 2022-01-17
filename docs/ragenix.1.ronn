@@ -1,0 +1,147 @@
+ragenix(1) -- age-encrypted secrets for Nix
+===========================================
+
+## SYNOPSIS
+
+`ragenix` [`--rules` <PATH>=./secrets.nix] [`-i` <PATH>]... (`-e` <PATH> | `-r`)<br>
+`ragenix` `-e` <PATH><br>
+`ragenix` `-r`<br>
+
+## DESCRIPTION
+
+`ragenix` encrypts secrets defined in a Nix configuration expression using
+`age(1)`. It is safe to publicly expose the resulting age-encrypted files, e.g.,
+by checking them into version control or copying them to the world-readable Nix
+store.
+
+## OPTIONS
+
+* `-e`, `--edit` <PATH>:
+    Decrypt the file at <PATH> and open it for editing. If the <PATH> does not
+    exist yet, `ragenix` opens an empty file for editing. In any case, the
+    given <PATH> has to match a rule as configured in the file given to the
+    `--rules` option.
+
+    If the `--identity` option is not given, `ragenix` tries to decrypt <PATH>
+    with the default SSH private keys. See `--identity` for details.
+
+    `ragenix` writes the decrypted plaintext contents of the secret at <PATH>
+    to a temporary file which is only accessible by the calling user. After
+    editing, `ragenix` deletes the file making it inaccessible after `ragenix`
+    exists.
+
+* `--editor` <PROGRAM>:
+    Use the given <PROGRAM> to open the decrypted file for editing. Defaults to
+    the `EDITOR` environment variable.
+
+    <PROGRAM> may denote an absolute binary path or a binary relative to the
+    `PATH` environment variable. `ragenix` assumes <PROGRAM> accepts the
+    absolute path to the decrypted age secret file as its first argument.
+
+    Giving the special token `-` as a <PROGRAM> causes `ragenix` to read from
+    standard input. In this case, `ragenix` stream-encrypts data from standard
+    input only and does not open the file for editing.
+
+* `-r`, `--rekey`:
+    Decrypt all secrets given in the rules configuration file and encrypt them
+    with the defined public keys. If a defined file does not exist yet, it is
+    ignored. This option is useful to grant a new recipient access to one or
+    multiple secrets.
+
+    If the `--identity` option is not given, `ragenix` tries to decrypt <PATH>
+    with the default SSH private keys. See `--identity` for details.
+
+    When rekeying, `ragenix` does not write any plaintext data to disk; all
+    processing happens in-memory.
+
+## COMMON OPTIONS
+
+* `--rules` <PATH>:
+    Path to a file containing a Nix expression which maps age-encrypted secret
+    files to the public keys of recipients who should be able to decrypt them.
+    Each defined secret file string is considered relative to the parent
+    directory of the rules file. See the [EXAMPLES][] section for a
+    simple rules configuration.
+
+    If omitted, `ragenix` reads the content of the `RULES` environment
+    variable. If the environment variable is also unset, `ragenix` tries
+    opening the file `secrets.nix` in the current working directory.
+
+* `-i`, `--identity`=<PATH>:
+    Decrypt using the identities at <PATH>.
+
+    This option can be repeated. Additionally, `ragenix` uses the default
+    Ed25519 and RSA SSH authentication identities at ~/.ssh/id_ed25519 and
+    ~/.ssh/id_rsa, respectively. Identities given explicitly take precedence
+    over the default SSH identities. If no identities are given, `ragenix`
+    tries using the default SSH identities only.
+
+    Passphrase-encrypted age identities and passphrase-encryted SSH identities
+    are supported. Currently, however, it is necessary to enter the passphrase
+    of an SSH identity for each file to decrypt. This may result in poor
+    usability, particularly when using the `--rekey` option.
+
+    For further details regarding this option also refer to `age(1)`.
+
+## FURTHER OPTIONS
+
+* `-s`, `--schema`:
+    Print the JSON schema the Nix configuration rules have to conform to and
+    exit. Useful for consumption by third-party applications.
+
+* `-v`, `--verbose`:
+    Print additional information during program execution.
+
+* `-V`, `--version`:
+    Print the version and exit.
+
+## PLUGINS
+
+`ragenix` also supports `age` plugins. If the plugin binaries are present in
+`PATH`, `ragenix` picks them up correctly.
+
+Additionally, `ragenix` supports adding plugins to its derviation to make them
+always available to `ragenix`. Use the `plugins` argument of the derivation to
+wrap the `ragenix` binary with a `PATH` extended by the given plugin
+derivations. See the [EXAMPLES][] section for an example.
+
+## EXAMPLES
+
+A basic Nix configuration rules file (typically named secrets.nix) which
+defines a secret file "secret.txt.age" which should be encrypted to an age and
+an SSH identity. `ragenix` looks for "secret.txt.age` relative ./secrets:
+
+    $ cat ./secrets/secrets.nix
+    {
+      "secret.txt.age".publicKeys = [
+        "age1g4eapz2lkdvrevsg443yx8rhxklhyz4sa8w0jdfyh8sgx3azhftsz8zu07"
+        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKrb9ne3nZjw6DW[...]8h/Zoa"
+      ];
+    }
+    $ file ./secrets/secret.txt.age
+    ./secrets/secret.txt.age: ASCII text
+
+Edit the secret file secret.txt.age in the default editor while using the
+default SSH Ed25519 identity at ~/.ssh/id_ed25519 with a rules configuration
+file different from ./secrets.nix:
+
+    $ ls /var/lib/rules.nix
+    rules.nix secret.txt.age
+    $ ragenix --rules /var/lib/rules.nix -e secret.txt.age
+
+Rekey all secrets given in ./secrets.nix with the age identity
+~/.age/ragenix.key:
+
+    $ ragenix -i ~/.age/ragenix.key -r
+
+Create/edit a secret from the system clipboard (on macOS):
+
+    $ pbpaste | ragenix --editor - -e secret.txt.age
+
+## SEE ALSO
+
+age(1), age-keygen(1)
+
+## AUTHORS
+
+Vincent Haupert <mail@vincent-haupert.de>
