@@ -20,14 +20,17 @@ store.
     Decrypt the file at <PATH> and open it for editing. If the <PATH> does not
     exist yet, `ragenix` opens an empty file for editing. In any case, the
     given <PATH> has to match a rule as configured in the file given to the
-    `--rules` option.
+    `--rules` option. After editing, `ragenix` encrypts the updated contents
+    and replaces the original file.
 
     If the `--identity` option is not given, `ragenix` tries to decrypt <PATH>
     with the default SSH private keys. See `--identity` for details.
 
+    The encrypted file always uses an ASCII-armored format.
+
     `ragenix` writes the decrypted plaintext contents of the secret at <PATH>
     to a temporary file which is only accessible by the calling user. After
-    editing, `ragenix` deletes the file making it inaccessible after `ragenix`
+    editing, `ragenix` deletes the file, making it inaccessible after `ragenix`
     exists.
 
 * `--editor` <PROGRAM>:
@@ -44,7 +47,7 @@ store.
 
 * `-r`, `--rekey`:
     Decrypt all secrets given in the rules configuration file and encrypt them
-    with the defined public keys. If a defined file does not exist yet, it is
+    with the defined public keys. If a secret file does not exist yet, it is
     ignored. This option is useful to grant a new recipient access to one or
     multiple secrets.
 
@@ -98,7 +101,7 @@ store.
 ## PLUGINS
 
 `ragenix` also supports `age` plugins. If the plugin binaries are present in
-`PATH`, `ragenix` picks them up correctly.
+`PATH`, `ragenix` picks them up as needed.
 
 Additionally, `ragenix` supports adding plugins to its derviation to make them
 always available to `ragenix`. Use the `plugins` argument of the derivation to
@@ -109,7 +112,7 @@ derivations. See the [EXAMPLES][] section for an example.
 
 A basic Nix configuration rules file (typically named secrets.nix) which
 defines a secret file "secret.txt.age" which should be encrypted to an age and
-an SSH identity. `ragenix` looks for "secret.txt.age` relative ./secrets:
+an SSH identity. `ragenix` looks for "secret.txt.age` relative ./secrets/:
 
     $ cat ./secrets/secrets.nix
     {
@@ -137,6 +140,16 @@ Rekey all secrets given in ./secrets.nix with the age identity
 Create/edit a secret from the system clipboard (on macOS):
 
     $ pbpaste | ragenix --editor - -e secret.txt.age
+
+Use `--editor` to generate an SSH Ed25519 private key:
+
+    $ ragenix --editor 'ssh-keygen -q -N "" -t ed25519 -f' -e ssh_host_key.age
+
+Make the `age` YubiKey plugin available to `ragenix`:
+
+    $ cat myragenix.nix
+    { ragenix, age-plugin-yubikey }:
+    ragenix.override { plugins = [ age-plugin-yubikey ]; }
 
 ## SEE ALSO
 
