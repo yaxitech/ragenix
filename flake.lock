@@ -51,11 +51,28 @@
         "type": "github"
       }
     },
+    "nixpkgs-ronn": {
+      "locked": {
+        "lastModified": 1642436540,
+        "narHash": "sha256-D2eoDUNBiWszaQLFTCP2unffwTSLz5VaUHaG+QWsCXE=",
+        "owner": "veehaitch",
+        "repo": "nixpkgs",
+        "rev": "0df6b5ecb8173818a042a1bc840b5805a7ee6ee9",
+        "type": "github"
+      },
+      "original": {
+        "owner": "veehaitch",
+        "ref": "ronn-r13y",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
         "agenix": "agenix",
         "flake-utils": "flake-utils",
         "nixpkgs": "nixpkgs",
+        "nixpkgs-ronn": "nixpkgs-ronn",
         "rust-overlay": "rust-overlay"
       }
     },

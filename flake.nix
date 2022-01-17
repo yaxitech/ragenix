@@ -3,6 +3,7 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    nixpkgs-ronn.url = "github:veehaitch/nixpkgs/ronn-r13y";
     flake-utils = {
       url = "github:numtide/flake-utils";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -18,7 +19,7 @@
     };
   };
 
-  outputs = { self, nixpkgs, flake-utils, rust-overlay, agenix }:
+  outputs = { self, nixpkgs, nixpkgs-ronn, flake-utils, rust-overlay, agenix }:
     let
       cargoTOML = builtins.fromTOML (builtins.readFile ./Cargo.toml);
       name = cargoTOML.package.name;
@@ -33,9 +34,14 @@
       eachDefaultSystem = eachSystem defaultSystems;
       eachLinuxSystem = eachSystem (lib.filter (lib.hasSuffix "-linux") flake-utils.lib.defaultSystems);
 
+      # XXX: remove when https://github.com/NixOS/nixpkgs/pull/155363 is merged
+      ronnOverlay = final: prev: {
+        ronn = prev.callPackage (nixpkgs-ronn + "/pkgs/development/tools/ronn") { };
+      };
+
       pkgsFor = system: import nixpkgs {
         inherit system;
-        overlays = [ rust-overlay.overlay self.overlay ];
+        overlays = [ rust-overlay.overlay self.overlay ronnOverlay ];
       };
     in
     recursiveMerge [
@@ -61,6 +67,27 @@
             drv = packages.${name};
           };
           defaultApp = apps.${name};
+
+          # Regenerate the roff and HTML manpages and commit the changes, if any
+          apps.update-manpage = flake-utils.lib.mkApp {
+            drv = pkgs.writeShellApplication {
+              name = "update-manpage";
+              runtimeInputs = with pkgs; [ ronn git ];
+              text = ''
+                ronn docs/ragenix.1.ronn
+
+                git diff --quiet -- docs/ragenix.1*          || changes=1
+                git diff --staged --quiet -- docs/ragenix.1* || changes=1
+
+                if [[ -z "''${changes:-}" ]]; then
+                  echo 'No changes to commit'
+                else
+                  echo 'Committing changes'
+                  git commit -m "docs: update manpage" docs/ragenix.1*
+                fi
+              '';
+            };
+          };
 
           # nix `check`
           checks.nixpkgs-fmt = pkgs.runCommand "check-nix-format" { } ''
@@ -92,7 +119,7 @@
             fi
           '';
 
-          checks.shell-completion = pkgs.runCommand "check-shell-completions" { } ''
+          checks.shell-files = pkgs.runCommand "check-shell-files" { } ''
             set -euo pipefail
 
             if [[ ! -e "${pkgs.ragenix}/share/bash-completion" ]]; then
@@ -101,8 +128,10 @@
               echo 'Failed to install zsh completions'
             elif [[ ! -e "${pkgs.ragenix}/share/fish" ]]; then
               echo 'Failed to install fish completions'
+            elif [[ ! -e "${pkgs.ragenix}/share/man/man1/ragenix.1.gz" ]]; then
+              echo 'Failed to install manpage'
             else
-              echo '${name} shell completions installed successfully'
+              echo '${name} shell files installed successfully'
               mkdir $out
               exit 0
             fi
@@ -154,11 +183,45 @@
             mkdir $out # success
           '';
 
+          # Make sure the roff and HTML manpages are up-to-date
+          checks.manpage = pkgs.runCommand "check-manpage"
+            {
+              buildInputs = with pkgs; [ ronn diffutils ];
+            } ''
+            set -euo pipefail
+
+            header "Generate roff and HTML manpage"
+            ln -s ${self}/docs/ragenix.1.ronn .
+            ronn ragenix.1.ronn
+
+            header "roff: strip date"
+            tail -n '+5' ${self}/docs/ragenix.1 > ragenix.1.old
+            tail -n '+5'              ragenix.1 > ragenix.1.new
+
+            diff -u ragenix.1.{old,new} > diff \
+              || printf "roff: not up-to-date:\n\n%s" "$(cat diff)"
+
+            header "html: strip date"
+            grep -v "<li class='tc'>" ${self}/docs/ragenix.1.html > ragenix.1.html.old
+            grep -v "<li class='tc'>"              ragenix.1.html > ragenix.1.html.new
+
+            diff -u ragenix.1.html.{old,new} > diff \
+              || printf "html: not up-to-date:\n\n%s" "$(cat diff)"
+
+            echo 'Manpage is up-to-date'
+            mkdir -p $out
+          '';
+
           # `nix develop`
           devShell = pkgs.mkShell {
             name = "${name}-dev-shell";
 
-            nativeBuildInputs = [ rust ] ++ (with pkgs; [ pkg-config openssl rust-analyzer ]);
+            nativeBuildInputs = [ rust ] ++ (with pkgs; [
+              openssl
+              pkg-config
+              ronn
+              rust-analyzer
+            ]);
 
             buildInputs = with pkgs; lib.optionals stdenv.isDarwin [
               libiconv
