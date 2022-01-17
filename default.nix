@@ -100,6 +100,6 @@ rustPlatform.buildRustPackage rec {
 
   # Make the plugins available in ragenix' PATH
   postFixup = lib.optionalString (plugins != [ ]) ''
-    wrapProgram "$out/bin/ragenix" --prefix PATH : ${lib.strings.makeBinPath plugins}
+    wrapProgram "$out/bin/ragenix" --suffix PATH : ${lib.strings.makeBinPath plugins}
   '';
 }
