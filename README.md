@@ -10,8 +10,8 @@ is possible on any system which has Nix installed—with particular support for 
 
 `ragenix` is a drop-in replacement for [@ryantm](https://github.com/ryantm)'s
 [`agenix`](https://github.com/ryantm/agenix) written in Rust. It aims at being fully compatible
-with its flake while offering more robust command line parsing, additional validation logic
-and solid tests.
+with its flake while offering more robust command line parsing, additional validation logic,
+plugin support, shell completions, and solid tests.
 
 **As opposed to `agenix`, `ragenix` only strives for supporting Nix Flakes**.
 
@@ -24,7 +24,7 @@ https://github.com/ryantm/agenix#installation) while replacing references to
 same as the `ragenix` package provides aliases for a) an `agenix` package and b) the `agenix` binary.
 The flake also exposes a NixOS module which is passed through from the `agenix` flake.
 
-## Create, edit and rekey secrets
+## Usage
 
 `ragenix` resembles the command line options and behavior of `agenix`:
 
@@ -47,39 +47,9 @@ OPTIONS:
                                        RULES=] [default: ./secrets.nix]
 ```
 
-* By default, `ragenix` looks for a Nix rules file in `./secrets.nix`. You may change this path by setting the `RULES`
-  environment variable accordingly. As a `ragenix` addon, you may also use the `--rules` command line option.
-* The Nix rules reference age-encrypted files relative to the rules file. For example, a `./secrets/secrets.nix` file with the
-  following content would instruct `ragenix` to look for `mysecret.age` in `./secrets/`: 
-  ```nix
-  { "mysecret.age".publicKeys = "age1hunh4g..."; }
-  ```
-* If a file given in the secrets rules does not exist:
-  - `--edit`: the file is created prior to opening it for editing.
-  - `--rekey`: the file is ignored.
-* `ragenix` opens a file for editing using `$EDITOR`. Again, you may use `--editor` instead of the
-  environment variable.
-  Use a value of `-` to read from standard input. This is useful, for example, to create secrets from clipboard contents:
-  ```shell
-  pbpaste | ragenix --editor - --edit mysecret.age
-  ```
-* Prior to editing/rekeying, `ragenix` verifies the validity of the rules file using [this JSON schema](
-  ./src/ragenix/agenix.schema.json). The schema is also available to third party applications with
-  the `--schema` command line switch. For an example rules file, please refer to the [`agenix` README](
-  https://github.com/ryantm/agenix#tutorial) or take a look at the files in the [`example`](./example) directory
-  of this repository.
+For the full documentation, read the [ragenix(1) man page](https://htmlpreview.github.io/?https://github.com/yaxitech/ragenix/blob/main/docs/ragenix.1.html).
 
 The `ragenix` package also provides shell completions for `bash`, `zsh`, and `fish`. Make sure to install the package with either `nix profile install github:yaxitech/ragenix`, `environment.systemPackages` on NixOS or `home.packages` for home-manager.
-
-## Plugin Support
-
-With the release of [`rage`](https://github.com/str4d/rage) v0.6.0 a plugin system was introduced. Using this plugin system `rage` supports identities and recipients from third-parties such as the [`age-plugin-yubikey`](https://github.com/str4d/age-plugin-yubikey). `ragenix` also supports this by offering a `plugins` argument which can be overriden to add your plugins:
-
-```nix
-ragenix.override { plugins = [ age-plugin-yubikey ]; }
-```
-
-Alternatively, add your plugins to `$PATH` so that `ragenix` (and `rage`) can find it.
 
 ## Contributions
 
