@@ -68,6 +68,27 @@
           };
           defaultApp = apps.${name};
 
+          # Regenerate the roff and HTML manpages and commit the changes, if any
+          apps.update-manpage = flake-utils.lib.mkApp {
+            drv = pkgs.writeShellApplication {
+              name = "update-manpage";
+              runtimeInputs = with pkgs; [ ronn git ];
+              text = ''
+                ronn docs/ragenix.1.ronn
+
+                git diff --quiet -- docs/ragenix.1*          || changes=1
+                git diff --staged --quiet -- docs/ragenix.1* || changes=1
+
+                if [[ -z "''${changes:-}" ]]; then
+                  echo 'No changes to commit'
+                else
+                  echo 'Committing changes'
+                  git commit -m "docs: update manpage" docs/ragenix.1*
+                fi
+              '';
+            };
+          };
+
           # nix `check`
           checks.nixpkgs-fmt = pkgs.runCommand "check-nix-format" { } ''
             ${pkgs.nixpkgs-fmt}/bin/nixpkgs-fmt --check ${./.}
