@@ -24,6 +24,8 @@ let
             pathWithoutPrefix == "/.gitignore" ||
             pathWithoutPrefix == "/LICENSE" ||
             pathWithoutPrefix == "/README.md" ||
+            pathWithoutPrefix == "/docs/ragenix.1.html" ||
+            pathWithoutPrefix == "/docs/ragenix.1.ronn" ||
             pathWithoutPrefix == "/flake.lock" ||
             pathWithoutPrefix == "/flake.nix"
           );
@@ -92,6 +94,8 @@ rustPlatform.buildRustPackage rec {
     installShellCompletion --bash "$(grep -oP 'RAGENIX_COMPLETIONS_BASH=\K.*' $buildOut)"
     installShellCompletion --zsh  "$(grep -oP 'RAGENIX_COMPLETIONS_ZSH=\K.*' $buildOut)"
     installShellCompletion --fish "$(grep -oP 'RAGENIX_COMPLETIONS_FISH=\K.*' $buildOut)"
+
+    installManPage docs/ragenix.1
   '';
 
   # Make the plugins available in ragenix' PATH
