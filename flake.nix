@@ -119,7 +119,7 @@
             fi
           '';
 
-          checks.shell-completion = pkgs.runCommand "check-shell-completions" { } ''
+          checks.shell-files = pkgs.runCommand "check-shell-files" { } ''
             set -euo pipefail
 
             if [[ ! -e "${pkgs.ragenix}/share/bash-completion" ]]; then
@@ -128,8 +128,10 @@
               echo 'Failed to install zsh completions'
             elif [[ ! -e "${pkgs.ragenix}/share/fish" ]]; then
               echo 'Failed to install fish completions'
+            elif [[ ! -e "${pkgs.ragenix}/share/man/man1/ragenix.1.gz" ]]; then
+              echo 'Failed to install manpage'
             else
-              echo '${name} shell completions installed successfully'
+              echo '${name} shell files installed successfully'
               mkdir $out
               exit 0
             fi
