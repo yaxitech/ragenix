@@ -3,6 +3,7 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    nixpkgs-ronn.url = "github:veehaitch/nixpkgs/ronn-r13y";
     flake-utils = {
       url = "github:numtide/flake-utils";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -18,7 +19,7 @@
     };
   };
 
-  outputs = { self, nixpkgs, flake-utils, rust-overlay, agenix }:
+  outputs = { self, nixpkgs, nixpkgs-ronn, flake-utils, rust-overlay, agenix }:
     let
       cargoTOML = builtins.fromTOML (builtins.readFile ./Cargo.toml);
       name = cargoTOML.package.name;
@@ -33,9 +34,14 @@
       eachDefaultSystem = eachSystem defaultSystems;
       eachLinuxSystem = eachSystem (lib.filter (lib.hasSuffix "-linux") flake-utils.lib.defaultSystems);
 
+      # XXX: remove when https://github.com/NixOS/nixpkgs/pull/155363 is merged
+      ronnOverlay = final: prev: {
+        ronn = prev.callPackage (nixpkgs-ronn + "/pkgs/development/tools/ronn") { };
+      };
+
       pkgsFor = system: import nixpkgs {
         inherit system;
-        overlays = [ rust-overlay.overlay self.overlay ];
+        overlays = [ rust-overlay.overlay self.overlay ronnOverlay ];
       };
     in
     recursiveMerge [
