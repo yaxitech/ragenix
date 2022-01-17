@@ -160,6 +160,35 @@
             mkdir $out # success
           '';
 
+          # Make sure the roff and HTML manpages are up-to-date
+          checks.manpage = pkgs.runCommand "check-manpage"
+            {
+              buildInputs = with pkgs; [ ronn diffutils ];
+            } ''
+            set -euo pipefail
+
+            header "Generate roff and HTML manpage"
+            ln -s ${self}/docs/ragenix.1.ronn .
+            ronn ragenix.1.ronn
+
+            header "roff: strip date"
+            tail -n '+5' ${self}/docs/ragenix.1 > ragenix.1.old
+            tail -n '+5'              ragenix.1 > ragenix.1.new
+
+            diff -u ragenix.1.{old,new} > diff \
+              || printf "roff: not up-to-date:\n\n%s" "$(cat diff)"
+
+            header "html: strip date"
+            grep -v "<li class='tc'>" ${self}/docs/ragenix.1.html > ragenix.1.html.old
+            grep -v "<li class='tc'>"              ragenix.1.html > ragenix.1.html.new
+
+            diff -u ragenix.1.html.{old,new} > diff \
+              || printf "html: not up-to-date:\n\n%s" "$(cat diff)"
+
+            echo 'Manpage is up-to-date'
+            mkdir -p $out
+          '';
+
           # `nix develop`
           devShell = pkgs.mkShell {
             name = "${name}-dev-shell";
