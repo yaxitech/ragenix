@@ -31,7 +31,7 @@ store.
     `ragenix` writes the decrypted plaintext contents of the secret at <PATH>
     to a temporary file which is only accessible by the calling user. After
     editing, `ragenix` deletes the file, making it inaccessible after `ragenix`
-    exists.
+    exits.
 
 * `--editor` <PROGRAM>:
     Use the given <PROGRAM> to open the decrypted file for editing. Defaults to
@@ -70,7 +70,7 @@ store.
     variable. If the environment variable is also unset, `ragenix` tries
     opening the file `secrets.nix` in the current working directory.
 
-* `-i`, `--identity`=<PATH>:
+* `-i`, `--identity` <PATH>:
     Decrypt using the identities at <PATH>.
 
     This option can be repeated. Additionally, `ragenix` uses the default
@@ -106,13 +106,14 @@ store.
 Additionally, `ragenix` supports adding plugins to its derviation to make them
 always available to `ragenix`. Use the `plugins` argument of the derivation to
 wrap the `ragenix` binary with a `PATH` extended by the given plugin
-derivations. See the [EXAMPLES][] section for an example.
+derivations. Matching plugin binaries which are part of `PATH` when invoking
+`ragenix` are preferred. See the [EXAMPLES][] section for an example.
 
 ## EXAMPLES
 
 A basic Nix configuration rules file (typically named secrets.nix) which
-defines a secret file "secret.txt.age" which should be encrypted to an age and
-an SSH identity. `ragenix` looks for "secret.txt.age` relative ./secrets/:
+defines a secret file secret.txt.age which should be encrypted to an age and
+an SSH recipient. `ragenix` looks for secret.txt.age relative to ./secrets/:
 
     $ cat ./secrets/secrets.nix
     {
@@ -128,9 +129,11 @@ Edit the secret file secret.txt.age in the default editor while using the
 default SSH Ed25519 identity at ~/.ssh/id_ed25519 with a rules configuration
 file different from ./secrets.nix:
 
-    $ ls /var/lib/rules.nix
+    $ ls ~/.ssh/
+    id_ed25519  id_ed25519.pub
+    $ ls /var/lib/secrets/
     rules.nix secret.txt.age
-    $ ragenix --rules /var/lib/rules.nix -e secret.txt.age
+    $ ragenix --rules /var/lib/secrets/rules.nix -e secret.txt.age
 
 Rekey all secrets given in ./secrets.nix with the age identity
 ~/.age/ragenix.key:

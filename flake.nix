@@ -193,14 +193,14 @@
             tail -n '+5'              ragenix.1 > ragenix.1.new
 
             diff -u ragenix.1.{old,new} > diff \
-              || printf "roff: not up-to-date:\n\n%s" "$(cat diff)"
+              || (printf "roff: error, not up-to-date:\n\n%s\n" "$(cat diff)" >&2 && exit 1)
 
             header "html: strip date"
             grep -v "<li class='tc'>" ${self}/docs/ragenix.1.html > ragenix.1.html.old
             grep -v "<li class='tc'>"              ragenix.1.html > ragenix.1.html.new
 
             diff -u ragenix.1.html.{old,new} > diff \
-              || printf "html: not up-to-date:\n\n%s" "$(cat diff)"
+              || (printf "html: error, not up-to-date:\n\n%s\n" "$(cat diff)" >&2 && exit 1)
 
             echo 'Manpage is up-to-date'
             mkdir -p $out

@@ -33,7 +33,7 @@ If the \fB\-\-identity\fR option is not given, \fBragenix\fR tries to decrypt \f
 The encrypted file always uses an ASCII\-armored format\.
 .
 .IP
-\fBragenix\fR writes the decrypted plaintext contents of the secret at \fIPATH\fR to a temporary file which is only accessible by the calling user\. After editing, \fBragenix\fR deletes the file, making it inaccessible after \fBragenix\fR exists\.
+\fBragenix\fR writes the decrypted plaintext contents of the secret at \fIPATH\fR to a temporary file which is only accessible by the calling user\. After editing, \fBragenix\fR deletes the file, making it inaccessible after \fBragenix\fR exits\.
 .
 .TP
 \fB\-\-editor\fR \fIPROGRAM\fR
@@ -65,7 +65,7 @@ Path to a file containing a Nix expression which maps age\-encrypted secret file
 If omitted, \fBragenix\fR reads the content of the \fBRULES\fR environment variable\. If the environment variable is also unset, \fBragenix\fR tries opening the file \fBsecrets\.nix\fR in the current working directory\.
 .
 .TP
-\fB\-i\fR, \fB\-\-identity\fR=\fIPATH\fR
+\fB\-i\fR, \fB\-\-identity\fR \fIPATH\fR
 Decrypt using the identities at \fIPATH\fR\.
 .
 .IP
@@ -95,10 +95,10 @@ Print the version and exit\.
 \fBragenix\fR also supports \fBage\fR plugins\. If the plugin binaries are present in \fBPATH\fR, \fBragenix\fR picks them up as needed\.
 .
 .P
-Additionally, \fBragenix\fR supports adding plugins to its derviation to make them always available to \fBragenix\fR\. Use the \fBplugins\fR argument of the derivation to wrap the \fBragenix\fR binary with a \fBPATH\fR extended by the given plugin derivations\. See the \fIEXAMPLES\fR section for an example\.
+Additionally, \fBragenix\fR supports adding plugins to its derviation to make them always available to \fBragenix\fR\. Use the \fBplugins\fR argument of the derivation to wrap the \fBragenix\fR binary with a \fBPATH\fR extended by the given plugin derivations\. Matching plugin binaries which are part of \fBPATH\fR when invoking \fBragenix\fR are preferred\. See the \fIEXAMPLES\fR section for an example\.
 .
 .SH "EXAMPLES"
-A basic Nix configuration rules file (typically named secrets\.nix) which defines a secret file "secret\.txt\.age" which should be encrypted to an age and an SSH identity\. \fBragenix\fR looks for "secret\.txt\.age` relative \./secrets/:
+A basic Nix configuration rules file (typically named secrets\.nix) which defines a secret file secret\.txt\.age which should be encrypted to an age and an SSH recipient\. \fBragenix\fR looks for secret\.txt\.age relative to \./secrets/:
 .
 .IP "" 4
 .
@@ -125,9 +125,11 @@ Edit the secret file secret\.txt\.age in the default editor while using the defa
 .
 .nf
 
-$ ls /var/lib/rules\.nix
+$ ls ~/\.ssh/
+id_ed25519  id_ed25519\.pub
+$ ls /var/lib/secrets/
 rules\.nix secret\.txt\.age
-$ ragenix \-\-rules /var/lib/rules\.nix \-e secret\.txt\.age
+$ ragenix \-\-rules /var/lib/secrets/rules\.nix \-e secret\.txt\.age
 .
 .fi
 .
