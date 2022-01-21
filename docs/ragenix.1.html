@@ -106,7 +106,7 @@ store.</p>
 <p>  <code>ragenix</code> writes the decrypted plaintext contents of the secret at <var>PATH</var>
   to a temporary file which is only accessible by the calling user. After
   editing, <code>ragenix</code> deletes the file, making it inaccessible after <code>ragenix</code>
-  exists.</p></dd>
+  exits.</p></dd>
 <dt><code>--editor</code> <var>PROGRAM</var></dt><dd><p>  Use the given <var>PROGRAM</var> to open the decrypted file for editing. Defaults to
   the <code>EDITOR</code> environment variable.</p>
 
@@ -142,7 +142,7 @@ store.</p>
 <p>  If omitted, <code>ragenix</code> reads the content of the <code>RULES</code> environment
   variable. If the environment variable is also unset, <code>ragenix</code> tries
   opening the file <code>secrets.nix</code> in the current working directory.</p></dd>
-<dt><code>-i</code>, <code>--identity</code>=<var>PATH</var></dt><dd><p>  Decrypt using the identities at <var>PATH</var>.</p>
+<dt><code>-i</code>, <code>--identity</code> <var>PATH</var></dt><dd><p>  Decrypt using the identities at <var>PATH</var>.</p>
 
 <p>  This option can be repeated. Additionally, <code>ragenix</code> uses the default
   Ed25519 and RSA SSH authentication identities at ~/.ssh/id_ed25519 and
@@ -177,13 +177,14 @@ store.</p>
 <p>Additionally, <code>ragenix</code> supports adding plugins to its derviation to make them
 always available to <code>ragenix</code>. Use the <code>plugins</code> argument of the derivation to
 wrap the <code>ragenix</code> binary with a <code>PATH</code> extended by the given plugin
-derivations. See the <a href="#EXAMPLES" title="EXAMPLES" data-bare-link="true">EXAMPLES</a> section for an example.</p>
+derivations. Matching plugin binaries which are part of <code>PATH</code> when invoking
+<code>ragenix</code> are preferred. See the <a href="#EXAMPLES" title="EXAMPLES" data-bare-link="true">EXAMPLES</a> section for an example.</p>
 
 <h2 id="EXAMPLES">EXAMPLES</h2>
 
 <p>A basic Nix configuration rules file (typically named secrets.nix) which
-defines a secret file "secret.txt.age" which should be encrypted to an age and
-an SSH identity. <code>ragenix</code> looks for "secret.txt.age` relative ./secrets/:</p>
+defines a secret file secret.txt.age which should be encrypted to an age and
+an SSH recipient. <code>ragenix</code> looks for secret.txt.age relative to ./secrets/:</p>
 
 <pre><code>$ cat ./secrets/secrets.nix
 {
@@ -200,9 +201,11 @@ $ file ./secrets/secret.txt.age
 default SSH Ed25519 identity at ~/.ssh/id_ed25519 with a rules configuration
 file different from ./secrets.nix:</p>
 
-<pre><code>$ ls /var/lib/rules.nix
+<pre><code>$ ls ~/.ssh/
+id_ed25519  id_ed25519.pub
+$ ls /var/lib/secrets/
 rules.nix secret.txt.age
-$ ragenix --rules /var/lib/rules.nix -e secret.txt.age
+$ ragenix --rules /var/lib/secrets/rules.nix -e secret.txt.age
 </code></pre>
 
 <p>Rekey all secrets given in ./secrets.nix with the age identity
