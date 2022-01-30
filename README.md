@@ -3,6 +3,7 @@
 [![Build status](https://img.shields.io/github/workflow/status/yaxitech/ragenix/CI)](https://github.com/yaxitech/ragenix/actions?query=branch%3Amain)
 [![License](https://img.shields.io/github/license/yaxitech/ragenix)](http://www.apache.org/licenses/LICENSE-2.0.html)
 [![Written in Rust](https://img.shields.io/badge/code-rust-orange)](https://www.rust-lang.org)
+[![ragenix(1)](https://img.shields.io/badge/man-ragenix(1)-blue)](https://htmlpreview.github.io/?https://github.com/yaxitech/ragenix/blob/main/docs/ragenix.1.html)
 
 `ragenix` provides age-encrypted secrets for NixOS systems which live in the Nix store
 and are decrypted on system activation. Using `ragenix` to create, edit and rekey secrets
@@ -26,28 +27,25 @@ The flake also exposes a NixOS module which is passed through from the `agenix` 
 
 ## Usage
 
-`ragenix` resembles the command line options and behavior of `agenix`:
+`ragenix` resembles the command line options and behavior of `agenix`.
+For the full documentation, read the [ragenix(1) man page](https://htmlpreview.github.io/?https://github.com/yaxitech/ragenix/blob/main/docs/ragenix.1.html).
 
 ```
 USAGE:
-    ragenix [FLAGS] [OPTIONS] <--edit <FILE>|--rekey|--schema>
-
-FLAGS:
-    -h, --help       Print help information
-    -r, --rekey      re-encrypts all secrets with specified recipients
-    -s, --schema     Prints the JSON schema Agenix rules have to conform to
-    -v, --verbose    verbose output
-    -V, --version    Print version information
+    ragenix [OPTIONS] <--edit <FILE>|--rekey|--schema>
 
 OPTIONS:
     -e, --edit <FILE>                  edits the age-encrypted FILE using $EDITOR
         --editor <EDITOR>              editor to use when editing FILE [env: EDITOR=vim]
+    -h, --help                         Print help information
     -i, --identity <PRIVATE_KEY>...    private key to use when decrypting
+    -r, --rekey                        re-encrypts all secrets with specified recipients
         --rules <RULES>                path to Nix file specifying recipient public keys [env:
                                        RULES=] [default: ./secrets.nix]
+    -s, --schema                       Prints the JSON schema Agenix rules have to conform to
+    -v, --verbose                      verbose output
+    -V, --version                      Print version information
 ```
-
-For the full documentation, read the [ragenix(1) man page](https://htmlpreview.github.io/?https://github.com/yaxitech/ragenix/blob/main/docs/ragenix.1.html).
 
 The `ragenix` package also provides shell completions for `bash`, `zsh`, and `fish`. Make sure to install the package with either `nix profile install github:yaxitech/ragenix`, `environment.systemPackages` on NixOS or `home.packages` for home-manager.
 
@@ -59,6 +57,7 @@ We'd love to see PRs from you! Please consider the following guidelines:
   don't introduce breaking changes.
 - The secrets configuration happens through a Nix configuration.
 - New features should support both NixOS and macOS, if applicable.
+- Update the manpage, if necessary
 
 The CI invokes `nix flake check`. Some of the checks invoke `nix` itself.
 To allow those tests to run `nix`, you have to enable the `recursive-nix` feature.
