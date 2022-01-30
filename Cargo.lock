@@ -892,21 +892,15 @@ dependencies = [
 
 [[package]]
 name = "itoa"
-version = "0.4.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b71991ff56294aa922b450139ee08b3bfc70982c6b2c7562771375cf73542dd4"
-
-[[package]]
-name = "itoa"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1aab8fc367588b89dcee83ab0fd66b72b50b72fa1904d7095045ace2b0c81c35"
 
 [[package]]
 name = "jsonschema"
-version = "0.13.3"
+version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "877e398ffb23c1c311c417ef5e72e8699c3822dbf835468f009c6ce91b6c206b"
+checksum = "542a96a0cf3c7c919187bd2789b046be6c95622c820928ca9ef442d838569ee3"
 dependencies = [
  "ahash",
  "base64",
@@ -914,8 +908,9 @@ dependencies = [
  "fancy-regex",
  "fraction",
  "iso8601",
- "itoa 0.4.8",
+ "itoa",
  "lazy_static",
+ "memchr",
  "num-cmp",
  "parking_lot 0.12.0",
  "percent-encoding",
@@ -1701,7 +1696,7 @@ version = "1.0.78"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d23c1ba4cf0efd44be32017709280b32d1cea5c3f1275c3b6d9e8bc54f758085"
 dependencies = [
- "itoa 1.0.1",
+ "itoa",
  "ryu",
  "serde",
 ]
