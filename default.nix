@@ -5,7 +5,7 @@
 , installShellFiles
 , libiconv
 , makeWrapper
-, nixFlakes
+, nix
 , openssl
 , pkg-config
 , plugins ? [ ]
@@ -74,7 +74,7 @@ rustPlatform.buildRustPackage rec {
   ];
 
   # Absolute path to the `nix` binary, used in `build.rs`
-  RAGENIX_NIX_BIN_PATH = "${nixFlakes}/bin/nix";
+  RAGENIX_NIX_BIN_PATH = "${nix}/bin/nix";
 
   # Run the tests without the "recursive-nix" feature to allow
   # building the package without having a recursive-nix-enabled Nix.
