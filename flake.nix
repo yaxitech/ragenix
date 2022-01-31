@@ -36,6 +36,7 @@
       pkgsFor = system: import nixpkgs {
         inherit system;
         overlays = [ rust-overlay.overlay self.overlay ];
+        config = { allowAliases = false; };
       };
     in
     recursiveMerge [
@@ -222,7 +223,7 @@
               darwin.Security
             ];
 
-            RAGENIX_NIX_BIN_PATH = "${pkgs.nixFlakes}/bin/nix";
+            RAGENIX_NIX_BIN_PATH = "${pkgs.nix}/bin/nix";
 
             RUST_SRC_PATH = "${rust}/lib/rustlib/src/rust/library";
 
@@ -238,7 +239,9 @@
       (eachLinuxSystem (pkgs: {
         checks.nixos-module =
           let
-            pythonTest = import ("${nixpkgs}/nixos/lib/testing-python.nix") { inherit (pkgs) system; };
+            pythonTest = import ("${nixpkgs}/nixos/lib/testing-python.nix") {
+              inherit (pkgs.stdenv.hostPlatform) system;
+            };
             secretsConfig = import ./example/secrets-configuration.nix;
             secretPath = "/run/agenix/github-runner.token";
             ageIdentitiesConfig = { lib, ... }: {
