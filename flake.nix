@@ -352,7 +352,7 @@
 
         # Overlay to add ragenix and replace agenix
         overlay = final: prev: rec {
-          ragenix = self.packages.${prev.system}.ragenix;
+          ragenix = self.packages.${prev.stdenv.hostPlatform.system}.ragenix;
           agenix = ragenix;
         };
       }
