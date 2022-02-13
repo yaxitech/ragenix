@@ -92,6 +92,7 @@ fn editor_hook(path: &Path, editor: &str) -> Result<()> {
 pub(crate) struct RagenixRule {
     pub path: PathBuf,
     pub public_keys: Vec<String>,
+    pub generate: Option<String>,
 }
 
 /// Validate conformance of the passed path to the JSON schema [`AGENIX_JSON_SCHEMA`].
@@ -135,9 +136,15 @@ pub(crate) fn parse_rules<P: AsRef<Path>>(rules_path: P) -> Result<Vec<RagenixRu
             .iter()
             .map(|x| x.as_str().unwrap().to_string())
             .collect();
+        let generate = val
+            .as_object()
+            .unwrap()
+            .get("generate")
+            .map(|s| s.as_str().unwrap().to_string());
         let rule = RagenixRule {
             path: p,
             public_keys,
+            generate,
         };
         rules.push(rule);
     }
@@ -160,6 +167,42 @@ pub(crate) fn rekey(
             writeln!(writer, "Does not exist, ignored: {}", entry.path.display())?;
         }
     }
+    Ok(())
+}
+
+/// Generate a secret using the generate script from the rule
+pub(crate) fn generate(entry: &RagenixRule, mut writer: impl Write) -> Result<()> {
+    if let Some(script) = &entry.generate {
+        writeln!(writer, "(Re-)generating {}", entry.path.display())?;
+        let dir = tempfile::tempdir()?;
+        fs::set_permissions(&dir, PermissionsExt::from_mode(0o700))?;
+
+        let input_path = dir.path().join("input");
+        let output_path = &entry.path;
+
+        let output = process::Command::new("/bin/sh")
+            .arg("-c")
+            .arg(script)
+            .output()
+            .expect("Failed to execute command");
+
+        fs::File::create(&input_path)?;
+        let mut dst = OpenOptions::new()
+            .mode(0o600)
+            .create(true)
+            .truncate(true)
+            .write(true)
+            .open(&input_path)?;
+        dst.write_all(&output.stdout)?;
+
+        age::encrypt(input_path, output_path.clone(), &entry.public_keys)?;
+    } else {
+        return Err(eyre!(
+            "{} does not define a generate script in the rules!",
+            entry.path.display()
+        ));
+    };
+
     Ok(())
 }
 

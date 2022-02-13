@@ -11,6 +11,7 @@ pub(crate) struct Opts {
     pub editor: Option<String>,
     pub identities: Option<Vec<String>>,
     pub rekey: bool,
+    pub generate: Option<String>,
     pub rules: String,
     pub schema: bool,
     pub verbose: bool,
@@ -63,9 +64,18 @@ fn build() -> App<'static> {
                 .short('s')
                 .takes_value(false),
         )
+        .arg(
+            Arg::new("generate")
+                .help("(re-)generates the age-encrypted FILE using the specified generate script")
+                .long("generate")
+                .short('g')
+                .takes_value(true)
+                .value_name("FILE")
+                .value_hint(ValueHint::FilePath),
+        )
         .group(
             ArgGroup::new("action")
-                .args(&["edit", "rekey", "schema"])
+                .args(&["edit", "rekey", "generate", "schema"])
                 .required(true),
         )
         .arg(
@@ -108,6 +118,7 @@ where
             .values_of("identity")
             .map(|vals| vals.map(str::to_string).collect::<Vec<_>>()),
         rekey: matches.is_present("rekey"),
+        generate: matches.value_of("generate").map(str::to_string),
         rules: matches
             .value_of("rules")
             .expect("Should never happen")

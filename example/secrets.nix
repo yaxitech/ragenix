@@ -9,4 +9,10 @@ in
     extra = "Additional attributes are perfectly fine";
   };
   "github-runner.token.age".publicKeys = [ age sshEd25519 sshRsa ];
+  "generated.secret.age" = {
+     publicKeys = [ age sshEd25519 sshRsa ];
+     generate = ''
+       xkcdpass -n 24
+     '';
+  };
 }
