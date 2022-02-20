@@ -1,7 +1,7 @@
 use std::ffi::OsString;
 
 use clap::{
-    crate_authors, crate_description, crate_name, crate_version, App, Arg, ArgGroup, ValueHint,
+    crate_authors, crate_description, crate_name, crate_version, Arg, ArgGroup, Command, ValueHint,
 };
 
 #[allow(dead_code)] // False positive
@@ -16,8 +16,8 @@ pub(crate) struct Opts {
     pub verbose: bool,
 }
 
-fn build() -> App<'static> {
-    App::new(crate_name!())
+fn build() -> Command<'static> {
+    Command::new(crate_name!())
         .version(crate_version!())
         .author(crate_authors!())
         .about(crate_description!())
