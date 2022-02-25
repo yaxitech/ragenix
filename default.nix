@@ -8,10 +8,10 @@
 , nix
 , openssl
 , pkg-config
+, self ? ./.
 , plugins ? [ ]
 }:
 let
-  cargoTOML = builtins.fromTOML (builtins.readFile ./Cargo.toml);
   # Filter out VCS files and files unrelated to the Rust ragenix package
   filterRustSource = src: with lib; cleanSourceWith {
     filter = cleanSourceFilter;
@@ -31,11 +31,13 @@ let
           );
     };
   };
+  rustSource = filterRustSource self;
+  cargoTOML = with builtins; fromTOML (readFile ./Cargo.toml);
 in
-rustPlatform.buildRustPackage rec {
+rustPlatform.buildRustPackage {
   pname = cargoTOML.package.name;
   version = cargoTOML.package.version;
-  src = filterRustSource ./.;
+  src = rustSource;
 
   cargoLock.lockFile = ./Cargo.lock;
 
