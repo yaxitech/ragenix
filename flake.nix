@@ -3,10 +3,7 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
-    flake-utils = {
-      url = "github:numtide/flake-utils";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    flake-utils.url = "github:numtide/flake-utils";
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -45,11 +42,12 @@
       #
       (eachDefaultSystem (pkgs:
         let
-          rust = pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain;
+          rust = pkgs.rust-bin.fromRustupToolchainFile "${self}/rust-toolchain";
         in
         rec {
           # `nix build`
-          packages.${name} = pkgs.callPackage ./default.nix {
+          packages.${name} = pkgs.callPackage "${self}/default.nix" {
+            inherit self;
             rustPlatform = pkgs.makeRustPlatform {
               cargo = rust;
               rustc = rust;
@@ -86,14 +84,14 @@
 
           # nix `check`
           checks.nixpkgs-fmt = pkgs.runCommand "check-nix-format" { } ''
-            ${pkgs.nixpkgs-fmt}/bin/nixpkgs-fmt --check ${./.}
+            ${pkgs.nixpkgs-fmt}/bin/nixpkgs-fmt --check ${self}
             mkdir $out #sucess
           '';
 
           checks.schema = pkgs.runCommand "emit-schema" { } ''
             set -euo pipefail
             ${pkgs.ragenix}/bin/ragenix --schema > "$TMPDIR/agenix.schema.json"
-            ${pkgs.diffutils}/bin/diff '${./src/ragenix/agenix.schema.json}' "$TMPDIR/agenix.schema.json"
+            ${pkgs.diffutils}/bin/diff '${self}/src/ragenix/agenix.schema.json' "$TMPDIR/agenix.schema.json"
             echo "Schema matches"
             mkdir "$out"
           '';
@@ -141,11 +139,11 @@
             # https://github.com/yaxitech/ragenix/issues/76
             ${lib.optionalString pkgs.stdenv.isDarwin ''export LANG="en_US.UTF-8"''}
 
-            files=('${./example/root.passwd.age}' '${./example/github-runner.token.age}')
+            files=('${self}/example/root.passwd.age' '${self}/example/github-runner.token.age')
 
             for file in ''${files[@]}; do
-              rage_output="$(${pkgs.rage}/bin/rage -i '${./example/keys/id_ed25519}' -d "$file")"
-              age_output="$(${pkgs.age}/bin/age    -i '${./example/keys/id_ed25519}' -d "$file")"
+              rage_output="$(${pkgs.rage}/bin/rage -i '${self}/example/keys/id_ed25519' -d "$file")"
+              age_output="$(${pkgs.age}/bin/age    -i '${self}/example/keys/id_ed25519' -d "$file")"
 
               if [[ "$rage_output" != "$age_output" ]]; then
                 printf 'Decrypted plaintext for %s differs for rage and age' "$file"
@@ -160,7 +158,7 @@
           checks.metadata = pkgs.runCommand "check-metadata" { } ''
             set -euo pipefail
 
-            flakeDescription=${lib.escapeShellArg (import ./flake.nix).description}
+            flakeDescription=${lib.escapeShellArg (import "${self}/flake.nix").description}
             packageDescription=${lib.escapeShellArg cargoTOML.package.description}
             if [[ "$flakeDescription" != "$packageDescription" ]]; then
               echo 'The descriptions given in flake.nix and Cargo.toml do not match'
@@ -211,16 +209,11 @@
           devShell = pkgs.mkShell {
             name = "${name}-dev-shell";
 
-            nativeBuildInputs = [ rust ] ++ (with pkgs; [
-              openssl
-              pkg-config
+            inputsFrom = [ self.packages."${pkgs.stdenv.system}".ragenix ];
+
+            nativeBuildInputs = with pkgs; [
               ronn
               rust-analyzer
-            ]);
-
-            buildInputs = with pkgs; lib.optionals stdenv.isDarwin [
-              libiconv
-              darwin.Security
             ];
 
             RAGENIX_NIX_BIN_PATH = "${pkgs.nix}/bin/nix";
@@ -242,12 +235,12 @@
             pythonTest = import ("${nixpkgs}/nixos/lib/testing-python.nix") {
               inherit (pkgs.stdenv.hostPlatform) system;
             };
-            secretsConfig = import ./example/secrets-configuration.nix;
+            secretsConfig = import "${self}/example/secrets-configuration.nix";
             secretPath = "/run/agenix/github-runner.token";
             ageIdentitiesConfig = { lib, ... }: {
               # XXX: This is insecure and copies your private key plaintext to the Nix store
               #      NEVER DO THIS IN YOUR CONFIG!
-              age.identityPaths = lib.mkForce [ ./example/keys/id_ed25519 ];
+              age.identityPaths = lib.mkForce [ "${self}/example/keys/id_ed25519" ];
             };
           in
           pythonTest.makeTest {
@@ -290,11 +283,11 @@
           }
           ''
             set -euo pipefail
-            cp -r '${./.}/example/.' "$TMPDIR"
+            cp -r '${self}/example/.' "$TMPDIR"
             chmod 600 *.age
             cd "$TMPDIR"
 
-            ln -s "${./example/keys}" "$TMPDIR/.ssh"
+            ln -s "${self}/example/keys" "$TMPDIR/.ssh"
             export HOME="$TMPDIR"
 
             ${pkgs.ragenix}/bin/ragenix --rekey
@@ -326,21 +319,21 @@
             }
             ''
               set -euo pipefail
-              cp -r '${./.}/example/.' "$TMPDIR"
+              cp -r '${self}/example/.' "$TMPDIR"
               cd "$TMPDIR"
 
               # Encrypt with ragenix
               echo 'wurzelpfropf' | ragenix --rules ./secrets-plugin.nix --editor - --edit unencrypted.age
 
               # Decrypt with rage
-              decrypted="$(PATH="${pluginsSearchPath}:$PATH" rage -i '${./example/keys/example_plugin_key.txt}' -d unencrypted.age)"
+              decrypted="$(PATH="${pluginsSearchPath}:$PATH" rage -i '${self}/example/keys/example_plugin_key.txt' -d unencrypted.age)"
               if [[ "$decrypted" != "wurzelpfropf" ]]; then
                 echo 'Unexpected value for decryption with plugin'
                 exit 1
               fi
 
               # Rekey
-              ragenix --rules ./secrets-plugin.nix -i '${./example/keys/example_plugin_key.txt}' --rekey
+              ragenix --rules ./secrets-plugin.nix -i '${self}/example/keys/example_plugin_key.txt' --rekey
 
               mkdir $out # success
             '';
