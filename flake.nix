@@ -209,16 +209,11 @@
           devShell = pkgs.mkShell {
             name = "${name}-dev-shell";
 
-            nativeBuildInputs = [ rust ] ++ (with pkgs; [
-              openssl
-              pkg-config
+            inputsFrom = [ self.packages."${pkgs.stdenv.system}".ragenix ];
+
+            nativeBuildInputs = with pkgs; [
               ronn
               rust-analyzer
-            ]);
-
-            buildInputs = with pkgs; lib.optionals stdenv.isDarwin [
-              libiconv
-              darwin.Security
             ];
 
             RAGENIX_NIX_BIN_PATH = "${pkgs.nix}/bin/nix";

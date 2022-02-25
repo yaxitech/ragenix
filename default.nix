@@ -71,7 +71,6 @@ rustPlatform.buildRustPackage {
   buildInputs = [
     openssl
   ] ++ lib.optionals stdenv.isDarwin [
-    libiconv
     darwin.Security
   ];
 
