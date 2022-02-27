@@ -66,7 +66,7 @@ fn editor_hook(path: &Path, editor: &str) -> Result<()> {
     } else {
         let (editor, args) = util::split_editor(editor)?;
         let cmd = process::Command::new(&editor)
-            .args(args.unwrap_or_else(Vec::new))
+            .args(args.unwrap_or_default())
             .arg(path)
             .stdin(process::Stdio::inherit())
             .stdout(process::Stdio::inherit())
