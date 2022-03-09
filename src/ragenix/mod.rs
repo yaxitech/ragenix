@@ -28,14 +28,13 @@ fn nix_rules_to_json<P: AsRef<Path>>(path: P) -> Result<serde_json::Value> {
 
     let nix_binary = env!("RAGENIX_NIX_BIN_PATH");
     let output = process::Command::new(nix_binary)
+        .arg("--extra-experimental-features")
+        .arg("nix-command")
         .arg("eval")
-        .arg("--experimental-features")
-        .arg("nix-command flakes")
         .arg("--no-net")
-        .arg("--impure")
         .arg("--json")
-        .arg("--expr")
-        .arg(format!("import {}", rules_filepath))
+        .arg("--file")
+        .arg(&*rules_filepath)
         .output()
         .wrap_err("failed to execute nix")?;
 
