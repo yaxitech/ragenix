@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta http-equiv='content-type' value='text/html;charset=utf8'>
-  <meta name='generator' value='Ronn/v0.7.3 (http://github.com/rtomayko/ronn/tree/0.7.3)'>
+  <meta http-equiv='content-type' content='text/html;charset=utf8'>
+  <meta name='generator' content='Ronn-NG/v0.9.1 (http://github.com/apjanke/ronn-ng/tree/0.9.1)'>
   <title>ragenix(1) - age-encrypted secrets for Nix</title>
   <style type='text/css' media='all'>
   /* style: man */
@@ -71,16 +71,17 @@
     <li class='tr'>ragenix(1)</li>
   </ol>
 
-  <h2 id="NAME">NAME</h2>
+  
+
+<h2 id="NAME">NAME</h2>
 <p class="man-name">
   <code>ragenix</code> - <span class="man-whatis">age-encrypted secrets for Nix</span>
 </p>
-
 <h2 id="SYNOPSIS">SYNOPSIS</h2>
 
-<p><code>ragenix</code> [<code>--rules</code> <var>PATH</var>=./secrets.nix] [<code>-i</code> <var>PATH</var>]... (<code>-e</code> <var>PATH</var> | <code>-r</code>)<br />
-<code>ragenix</code> <code>-e</code> <var>PATH</var><br />
-<code>ragenix</code> <code>-r</code><br /></p>
+<p><code>ragenix</code> [<code>--rules</code> <var>PATH</var>=./secrets.nix] [<code>-i</code> <var>PATH</var>]... (<code>-e</code> <var>PATH</var> | <code>-r</code>)<br>
+<code>ragenix</code> <code>-e</code> <var>PATH</var><br>
+<code>ragenix</code> <code>-r</code><br></p>
 
 <h2 id="DESCRIPTION">DESCRIPTION</h2>
 
@@ -92,82 +93,108 @@ store.</p>
 <h2 id="OPTIONS">OPTIONS</h2>
 
 <dl>
-<dt><code>-e</code>, <code>--edit</code> <var>PATH</var></dt><dd><p>  Decrypt the file at <var>PATH</var> and open it for editing. If the <var>PATH</var> does not
+<dt>
+<code>-e</code>, <code>--edit</code> <var>PATH</var>
+</dt>
+<dd>  Decrypt the file at <var>PATH</var> and open it for editing. If the <var>PATH</var> does not
   exist yet, <code>ragenix</code> opens an empty file for editing. In any case, the
   given <var>PATH</var> has to match a rule as configured in the file given to the
   <code>--rules</code> option. After editing, <code>ragenix</code> encrypts the updated contents
-  and replaces the original file.</p>
+  and replaces the original file.
 
-<p>  If the <code>--identity</code> option is not given, <code>ragenix</code> tries to decrypt <var>PATH</var>
+    <p>If the <code>--identity</code> option is not given, <code>ragenix</code> tries to decrypt <var>PATH</var>
   with the default SSH private keys. See <code>--identity</code> for details.</p>
 
-<p>  The encrypted file always uses an ASCII-armored format.</p>
+    <p>The encrypted file always uses an ASCII-armored format.</p>
 
-<p>  <code>ragenix</code> writes the decrypted plaintext contents of the secret at <var>PATH</var>
+    <p><code>ragenix</code> writes the decrypted plaintext contents of the secret at <var>PATH</var>
   to a temporary file which is only accessible by the calling user. After
   editing, <code>ragenix</code> deletes the file, making it inaccessible after <code>ragenix</code>
-  exits.</p></dd>
-<dt><code>--editor</code> <var>PROGRAM</var></dt><dd><p>  Use the given <var>PROGRAM</var> to open the decrypted file for editing. Defaults to
-  the <code>EDITOR</code> environment variable.</p>
+  exits.</p>
+</dd>
+<dt>
+<code>--editor</code> <var>PROGRAM</var>
+</dt>
+<dd>  Use the given <var>PROGRAM</var> to open the decrypted file for editing. Defaults to
+  the <code>EDITOR</code> environment variable.
 
-<p>  <var>PROGRAM</var> may denote an absolute binary path or a binary relative to the
+    <p><var>PROGRAM</var> may denote an absolute binary path or a binary relative to the
   <code>PATH</code> environment variable. <code>ragenix</code> assumes <var>PROGRAM</var> accepts the
   absolute path to the decrypted age secret file as its first argument.</p>
 
-<p>  Giving the special token <code>-</code> as a <var>PROGRAM</var> causes <code>ragenix</code> to read from
+    <p>Giving the special token <code>-</code> as a <var>PROGRAM</var> causes <code>ragenix</code> to read from
   standard input. In this case, <code>ragenix</code> stream-encrypts data from standard
-  input only and does not open the file for editing.</p></dd>
-<dt><code>-r</code>, <code>--rekey</code></dt><dd><p>  Decrypt all secrets given in the rules configuration file and encrypt them
+  input only and does not open the file for editing.</p>
+</dd>
+<dt>
+<code>-r</code>, <code>--rekey</code>
+</dt>
+<dd>  Decrypt all secrets given in the rules configuration file and encrypt them
   with the defined public keys. If a secret file does not exist yet, it is
   ignored. This option is useful to grant a new recipient access to one or
-  multiple secrets.</p>
+  multiple secrets.
 
-<p>  If the <code>--identity</code> option is not given, <code>ragenix</code> tries to decrypt <var>PATH</var>
+    <p>If the <code>--identity</code> option is not given, <code>ragenix</code> tries to decrypt <var>PATH</var>
   with the default SSH private keys. See <code>--identity</code> for details.</p>
 
-<p>  When rekeying, <code>ragenix</code> does not write any plaintext data to disk; all
-  processing happens in-memory.</p></dd>
+    <p>When rekeying, <code>ragenix</code> does not write any plaintext data to disk; all
+  processing happens in-memory.</p>
+</dd>
 </dl>
-
 
 <h2 id="COMMON-OPTIONS">COMMON OPTIONS</h2>
 
 <dl>
-<dt><code>--rules</code> <var>PATH</var></dt><dd><p>  Path to a file containing a Nix expression which maps age-encrypted secret
+<dt>
+<code>--rules</code> <var>PATH</var>
+</dt>
+<dd>  Path to a file containing a Nix expression which maps age-encrypted secret
   files to the public keys of recipients who should be able to decrypt them.
   Each defined secret file string is considered relative to the parent
   directory of the rules file. See the <a href="#EXAMPLES" title="EXAMPLES" data-bare-link="true">EXAMPLES</a> section for a
-  simple rules configuration.</p>
+  simple rules configuration.
 
-<p>  If omitted, <code>ragenix</code> reads the content of the <code>RULES</code> environment
+    <p>If omitted, <code>ragenix</code> reads the content of the <code>RULES</code> environment
   variable. If the environment variable is also unset, <code>ragenix</code> tries
-  opening the file <code>secrets.nix</code> in the current working directory.</p></dd>
-<dt><code>-i</code>, <code>--identity</code> <var>PATH</var></dt><dd><p>  Decrypt using the identities at <var>PATH</var>.</p>
+  opening the file <code>secrets.nix</code> in the current working directory.</p>
+</dd>
+<dt>
+<code>-i</code>, <code>--identity</code> <var>PATH</var>
+</dt>
+<dd>  Decrypt using the identities at <var>PATH</var>.
 
-<p>  This option can be repeated. Additionally, <code>ragenix</code> uses the default
+    <p>This option can be repeated. Additionally, <code>ragenix</code> uses the default
   Ed25519 and RSA SSH authentication identities at ~/.ssh/id_ed25519 and
   ~/.ssh/id_rsa, respectively. Identities given explicitly take precedence
   over the default SSH identities. If no identities are given, <code>ragenix</code>
   tries using the default SSH identities only.</p>
 
-<p>  Passphrase-encrypted age identities and passphrase-encryted SSH identities
+    <p>Passphrase-encrypted age identities and passphrase-encryted SSH identities
   are supported. Currently, however, it is necessary to enter the passphrase
   of an SSH identity for each file to decrypt. This may result in poor
   usability, particularly when using the <code>--rekey</code> option.</p>
 
-<p>  For further details regarding this option also refer to <code>age(1)</code>.</p></dd>
+    <p>For further details regarding this option also refer to <code>age(1)</code>.</p>
+</dd>
 </dl>
-
 
 <h2 id="FURTHER-OPTIONS">FURTHER OPTIONS</h2>
 
 <dl>
-<dt><code>-s</code>, <code>--schema</code></dt><dd><p>  Print the JSON schema the Nix configuration rules have to conform to and
-  exit. Useful for consumption by third-party applications.</p></dd>
-<dt><code>-v</code>, <code>--verbose</code></dt><dd><p>  Print additional information during program execution.</p></dd>
-<dt><code>-V</code>, <code>--version</code></dt><dd><p>  Print the version and exit.</p></dd>
+<dt>
+<code>-s</code>, <code>--schema</code>
+</dt>
+<dd>  Print the JSON schema the Nix configuration rules have to conform to and
+  exit. Useful for consumption by third-party applications.</dd>
+<dt>
+<code>-v</code>, <code>--verbose</code>
+</dt>
+<dd>  Print additional information during program execution.</dd>
+<dt>
+<code>-V</code>, <code>--version</code>
+</dt>
+<dd>  Print the version and exit.</dd>
 </dl>
-
 
 <h2 id="PLUGINS">PLUGINS</h2>
 
@@ -237,8 +264,7 @@ ragenix.override { plugins = [ age-plugin-yubikey ]; }
 
 <h2 id="AUTHORS">AUTHORS</h2>
 
-<p>Vincent Haupert <a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#109;&#97;&#105;&#108;&#64;&#118;&#105;&#110;&#99;&#101;&#110;&#116;&#45;&#104;&#97;&#117;&#112;&#101;&#114;&#116;&#46;&#100;&#101;" data-bare-link="true">&#109;&#97;&#105;&#108;&#64;&#118;&#105;&#110;&#99;&#101;&#110;&#116;&#45;&#104;&#97;&#117;&#112;&#101;&#114;&#116;&#46;&#100;&#101;</a></p>
-
+<p>Vincent Haupert <a href="mailto:mail@vincent-haupert.de" data-bare-link="true">mail@vincent-haupert.de</a></p>
 
   <ol class='man-decor man-foot man foot'>
     <li class='tl'></li>

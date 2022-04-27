@@ -1,196 +1,127 @@
-.\" generated with Ronn/v0.7.3
-.\" http://github.com/rtomayko/ronn/tree/0.7.3
-.
-.TH "RAGENIX" "1" "January 2022" "" ""
-.
+.\" generated with Ronn-NG/v0.9.1
+.\" http://github.com/apjanke/ronn-ng/tree/0.9.1
+.TH "RAGENIX" "1" "January 2022" ""
 .SH "NAME"
 \fBragenix\fR \- age\-encrypted secrets for Nix
-.
 .SH "SYNOPSIS"
-\fBragenix\fR [\fB\-\-rules\fR \fIPATH\fR=\./secrets\.nix] [\fB\-i\fR \fIPATH\fR]\.\.\. (\fB\-e\fR \fIPATH\fR | \fB\-r\fR)
-.
+\fBragenix\fR [\fB\-\-rules\fR \fIPATH\fR=\./secrets\.nix] [\fB\-i\fR \fIPATH\fR]\|\.\|\.\|\. (\fB\-e\fR \fIPATH\fR | \fB\-r\fR)
 .br
 \fBragenix\fR \fB\-e\fR \fIPATH\fR
-.
 .br
 \fBragenix\fR \fB\-r\fR
-.
 .br
-.
 .SH "DESCRIPTION"
 \fBragenix\fR encrypts secrets defined in a Nix configuration expression using \fBage(1)\fR\. It is safe to publicly expose the resulting age\-encrypted files, e\.g\., by checking them into version control or copying them to the world\-readable Nix store\.
-.
 .SH "OPTIONS"
-.
 .TP
 \fB\-e\fR, \fB\-\-edit\fR \fIPATH\fR
 Decrypt the file at \fIPATH\fR and open it for editing\. If the \fIPATH\fR does not exist yet, \fBragenix\fR opens an empty file for editing\. In any case, the given \fIPATH\fR has to match a rule as configured in the file given to the \fB\-\-rules\fR option\. After editing, \fBragenix\fR encrypts the updated contents and replaces the original file\.
-.
 .IP
 If the \fB\-\-identity\fR option is not given, \fBragenix\fR tries to decrypt \fIPATH\fR with the default SSH private keys\. See \fB\-\-identity\fR for details\.
-.
 .IP
 The encrypted file always uses an ASCII\-armored format\.
-.
 .IP
 \fBragenix\fR writes the decrypted plaintext contents of the secret at \fIPATH\fR to a temporary file which is only accessible by the calling user\. After editing, \fBragenix\fR deletes the file, making it inaccessible after \fBragenix\fR exits\.
-.
 .TP
 \fB\-\-editor\fR \fIPROGRAM\fR
 Use the given \fIPROGRAM\fR to open the decrypted file for editing\. Defaults to the \fBEDITOR\fR environment variable\.
-.
 .IP
 \fIPROGRAM\fR may denote an absolute binary path or a binary relative to the \fBPATH\fR environment variable\. \fBragenix\fR assumes \fIPROGRAM\fR accepts the absolute path to the decrypted age secret file as its first argument\.
-.
 .IP
 Giving the special token \fB\-\fR as a \fIPROGRAM\fR causes \fBragenix\fR to read from standard input\. In this case, \fBragenix\fR stream\-encrypts data from standard input only and does not open the file for editing\.
-.
 .TP
 \fB\-r\fR, \fB\-\-rekey\fR
 Decrypt all secrets given in the rules configuration file and encrypt them with the defined public keys\. If a secret file does not exist yet, it is ignored\. This option is useful to grant a new recipient access to one or multiple secrets\.
-.
 .IP
 If the \fB\-\-identity\fR option is not given, \fBragenix\fR tries to decrypt \fIPATH\fR with the default SSH private keys\. See \fB\-\-identity\fR for details\.
-.
 .IP
 When rekeying, \fBragenix\fR does not write any plaintext data to disk; all processing happens in\-memory\.
-.
 .SH "COMMON OPTIONS"
-.
 .TP
 \fB\-\-rules\fR \fIPATH\fR
 Path to a file containing a Nix expression which maps age\-encrypted secret files to the public keys of recipients who should be able to decrypt them\. Each defined secret file string is considered relative to the parent directory of the rules file\. See the \fIEXAMPLES\fR section for a simple rules configuration\.
-.
 .IP
 If omitted, \fBragenix\fR reads the content of the \fBRULES\fR environment variable\. If the environment variable is also unset, \fBragenix\fR tries opening the file \fBsecrets\.nix\fR in the current working directory\.
-.
 .TP
 \fB\-i\fR, \fB\-\-identity\fR \fIPATH\fR
 Decrypt using the identities at \fIPATH\fR\.
-.
 .IP
 This option can be repeated\. Additionally, \fBragenix\fR uses the default Ed25519 and RSA SSH authentication identities at ~/\.ssh/id_ed25519 and ~/\.ssh/id_rsa, respectively\. Identities given explicitly take precedence over the default SSH identities\. If no identities are given, \fBragenix\fR tries using the default SSH identities only\.
-.
 .IP
 Passphrase\-encrypted age identities and passphrase\-encryted SSH identities are supported\. Currently, however, it is necessary to enter the passphrase of an SSH identity for each file to decrypt\. This may result in poor usability, particularly when using the \fB\-\-rekey\fR option\.
-.
 .IP
 For further details regarding this option also refer to \fBage(1)\fR\.
-.
 .SH "FURTHER OPTIONS"
-.
 .TP
 \fB\-s\fR, \fB\-\-schema\fR
 Print the JSON schema the Nix configuration rules have to conform to and exit\. Useful for consumption by third\-party applications\.
-.
 .TP
 \fB\-v\fR, \fB\-\-verbose\fR
 Print additional information during program execution\.
-.
 .TP
 \fB\-V\fR, \fB\-\-version\fR
 Print the version and exit\.
-.
 .SH "PLUGINS"
 \fBragenix\fR also supports \fBage\fR plugins\. If the plugin binaries are present in \fBPATH\fR, \fBragenix\fR picks them up as needed\.
-.
 .P
 Additionally, \fBragenix\fR supports adding plugins to its derviation to make them always available to \fBragenix\fR\. Use the \fBplugins\fR argument of the derivation to wrap the \fBragenix\fR binary with a \fBPATH\fR extended by the given plugin derivations\. Matching plugin binaries which are part of \fBPATH\fR when invoking \fBragenix\fR are preferred\. See the \fIEXAMPLES\fR section for an example\.
-.
 .SH "EXAMPLES"
 A basic Nix configuration rules file (typically named secrets\.nix) which defines a secret file secret\.txt\.age which should be encrypted to an age and an SSH recipient\. \fBragenix\fR looks for secret\.txt\.age relative to \./secrets/:
-.
 .IP "" 4
-.
 .nf
-
 $ cat \./secrets/secrets\.nix
 {
   "secret\.txt\.age"\.publicKeys = [
     "age1g4eapz2lkdvrevsg443yx8rhxklhyz4sa8w0jdfyh8sgx3azhftsz8zu07"
-    "ssh\-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKrb9ne3nZjw6DW[\.\.\.]8h/Zoa"
+    "ssh\-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKrb9ne3nZjw6DW[\|\.\|\.\|\.]8h/Zoa"
   ];
 }
 $ file \./secrets/secret\.txt\.age
-\./secrets/secret\.txt\.age: ASCII text
-.
+\&\./secrets/secret\.txt\.age: ASCII text
 .fi
-.
 .IP "" 0
-.
 .P
 Edit the secret file secret\.txt\.age in the default editor while using the default SSH Ed25519 identity at ~/\.ssh/id_ed25519 with a rules configuration file different from \./secrets\.nix:
-.
 .IP "" 4
-.
 .nf
-
 $ ls ~/\.ssh/
 id_ed25519  id_ed25519\.pub
 $ ls /var/lib/secrets/
 rules\.nix secret\.txt\.age
 $ ragenix \-\-rules /var/lib/secrets/rules\.nix \-e secret\.txt\.age
-.
 .fi
-.
 .IP "" 0
-.
 .P
 Rekey all secrets given in \./secrets\.nix with the age identity ~/\.age/ragenix\.key:
-.
 .IP "" 4
-.
 .nf
-
 $ ragenix \-i ~/\.age/ragenix\.key \-r
-.
 .fi
-.
 .IP "" 0
-.
 .P
 Create/edit a secret from the system clipboard (on macOS):
-.
 .IP "" 4
-.
 .nf
-
 $ pbpaste | ragenix \-\-editor \- \-e secret\.txt\.age
-.
 .fi
-.
 .IP "" 0
-.
 .P
 Use \fB\-\-editor\fR to generate an SSH Ed25519 private key:
-.
 .IP "" 4
-.
 .nf
-
 $ ragenix \-\-editor \'ssh\-keygen \-q \-N "" \-t ed25519 \-f\' \-e ssh_host_key\.age
-.
 .fi
-.
 .IP "" 0
-.
 .P
 Make the \fBage\fR YubiKey plugin available to \fBragenix\fR:
-.
 .IP "" 4
-.
 .nf
-
 $ cat myragenix\.nix
 { ragenix, age\-plugin\-yubikey }:
 ragenix\.override { plugins = [ age\-plugin\-yubikey ]; }
-.
 .fi
-.
 .IP "" 0
-.
 .SH "SEE ALSO"
 age(1), age\-keygen(1)
-.
 .SH "AUTHORS"
 Vincent Haupert \fImail@vincent\-haupert\.de\fR
