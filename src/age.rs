@@ -138,7 +138,7 @@ pub(crate) fn decrypt<P: AsRef<Path>>(
                 .to_str()
                 .map(std::string::ToString::to_string);
             let mut ciphertext_writer =
-                OutputWriter::new(output, OutputFormat::Unknown, output_file_mode)?;
+                OutputWriter::new(output, OutputFormat::Unknown, output_file_mode, false)?;
             io::copy(&mut plaintext_reader, &mut ciphertext_writer)?;
             Ok(())
         })
@@ -160,6 +160,7 @@ pub(crate) fn encrypt<P: AsRef<Path>>(
         output_file.as_ref().to_str().map(str::to_string),
         OutputFormat::Text,
         output_file_mode,
+        false,
     )?;
 
     let mut recipients: Vec<Box<dyn age::Recipient>> = vec![];
