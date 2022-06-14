@@ -18,6 +18,9 @@
           "description": "An age-compatible recipient, e.g., an ed25519 SSH public key"
         },
         "uniqueItems": true
+      },
+      "generate": {
+        "type": "string"
       }
     }
   }

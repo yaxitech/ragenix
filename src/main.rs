@@ -43,6 +43,16 @@ fn main() -> Result<()> {
             ragenix::edit(&rule, &identities, editor, &mut std::io::stdout())?;
         } else if opts.rekey {
             ragenix::rekey(&rules, &identities, &mut std::io::stdout())?;
+        } else if let Some(path) = &opts.generate {
+            let path_normalized = util::normalize_path(Path::new(path));
+            let generate_path = std::env::current_dir()
+                .and_then(fs::canonicalize)
+                .map(|p| p.join(path_normalized))?;
+            let rule = rules
+                .into_iter()
+                .find(|x| x.path == generate_path)
+                .ok_or_else(|| eyre!("No rule for the given file {}", path))?;
+            ragenix::generate(&rule, &mut std::io::stdout())?;
         }
     }
 
