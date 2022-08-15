@@ -285,7 +285,6 @@
             set -euo pipefail
             cp -r '${self}/example/.' "$TMPDIR"
             chmod 600 *.age
-            cd "$TMPDIR"
 
             ln -s "${self}/example/keys" "$TMPDIR/.ssh"
             export HOME="$TMPDIR"

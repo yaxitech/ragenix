@@ -84,7 +84,6 @@ fn build() -> Command<'static> {
                 .takes_value(true)
                 .env("RULES")
                 .value_name("RULES")
-                .required_unless_present_any(&["schema"])
                 .default_value("./secrets.nix")
                 .value_hint(ValueHint::FilePath),
         )
