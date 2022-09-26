@@ -250,7 +250,7 @@
             };
           in
           pythonTest.makeTest {
-            machine.imports = [
+            nodes.machine.imports = [
               self.nixosModules.age
               secretsConfig
               ageIdentitiesConfig
