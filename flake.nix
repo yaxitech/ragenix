@@ -32,7 +32,7 @@
 
       pkgsFor = system: import nixpkgs {
         inherit system;
-        overlays = [ rust-overlay.overlay self.overlay ];
+        overlays = [ rust-overlay.overlays.default self.overlay ];
         config = { allowAliases = false; };
       };
     in
