@@ -32,7 +32,7 @@
 
       pkgsFor = system: import nixpkgs {
         inherit system;
-        overlays = [ rust-overlay.overlay self.overlay ];
+        overlays = [ rust-overlay.overlays.default self.overlays.default ];
         config = { allowAliases = false; };
       };
     in
@@ -53,13 +53,19 @@
               rustc = rust;
             };
           };
-          defaultPackage = packages.${name};
+          packages.default = packages.${name};
+          defaultPackage = lib.warnIf (builtins.compareVersions builtins.nixVersion "2.7" >= 0)
+            "ragenix's flake output `defaultPackage` is deprecated in favor of `packages.default` for Nix >= 2.7"
+            packages.default;
 
           # `nix run`
           apps.${name} = flake-utils.lib.mkApp {
             drv = packages.${name};
           };
-          defaultApp = apps.${name};
+          apps.default = apps.${name};
+          defaultApp = lib.warnIf (builtins.compareVersions builtins.nixVersion "2.7" >= 0)
+            "ragenix's flake output `defaultApp` is deprecated in favor of `apps.default` for Nix >= 2.7"
+            apps.default;
 
           # Regenerate the roff and HTML manpages and commit the changes, if any
           apps.update-manpage = flake-utils.lib.mkApp {
@@ -244,7 +250,7 @@
             };
           in
           pythonTest.makeTest {
-            machine.imports = [
+            nodes.machine.imports = [
               self.nixosModules.age
               secretsConfig
               ageIdentitiesConfig
@@ -346,10 +352,14 @@
         inherit (agenix) nixosModules;
 
         # Overlay to add ragenix and replace agenix
-        overlay = final: prev: rec {
+        overlays.default = final: prev: rec {
           ragenix = self.packages.${prev.stdenv.hostPlatform.system}.ragenix;
           agenix = ragenix;
         };
+
+        overlay = lib.warnIf (builtins.compareVersions builtins.nixVersion "2.7" >= 0)
+          "ragenix's flake output `overlay` is deprecated in favor of `overlays.default` for Nix >= 2.7"
+          self.overlays.default;
       }
     ];
 }
