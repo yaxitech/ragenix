@@ -12,7 +12,7 @@ recursive-nix = []
 
 [dependencies]
 age = { version = "^0.8", default-features = false, features = [ "cli-common", "ssh", "armor", "plugin" ] }
-clap = { version = "^3.0", features = [ "cargo", "env" ] }
+clap = { version = "^4.0", features = [ "cargo", "env" ] }
 color-eyre = { version = "^0.6", default-features = false, features = [ "track-caller" ] }
 home = "^0.5"
 jsonschema = { version = "^0.16", default-features = false }
@@ -31,5 +31,5 @@ indoc = "^1.0"
 hex-literal = "^0.3"
 
 [build-dependencies]
-clap = { version = "^3.0", features = [ "cargo", "env" ] }
-clap_complete = "^3.0"
+clap = { version = "^4.0", features = [ "cargo", "env" ] }
+clap_complete = "^4.0"

@@ -249,7 +249,9 @@
               age.identityPaths = lib.mkForce [ "${self}/example/keys/id_ed25519" ];
             };
           in
-          pythonTest.makeTest {
+          pythonTest.runTest {
+            name = "ragenix-nixos-module";
+
             nodes.machine.imports = [
               self.nixosModules.age
               secretsConfig
