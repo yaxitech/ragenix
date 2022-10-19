@@ -3,7 +3,6 @@
 , stdenv
 , darwin
 , installShellFiles
-, libiconv
 , makeWrapper
 , nix
 , openssl
