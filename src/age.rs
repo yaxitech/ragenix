@@ -40,7 +40,7 @@ fn get_age_decryptor<P: AsRef<Path>>(
 /// https://github.com/str4d/rage/blob/85c0788dc511f1410b4c1811be6b8904d91f85db/rage/src/bin/rage/main.rs)
 fn parse_recipient(
     s: &str,
-    recipients: &mut Vec<Box<dyn age::Recipient>>,
+    recipients: &mut Vec<Box<dyn age::Recipient + Send>>,
     plugin_recipients: &mut Vec<age::plugin::Recipient>,
 ) -> Result<()> {
     if let Ok(pk) = s.parse::<age::x25519::Recipient>() {
@@ -78,7 +78,7 @@ fn get_default_identity_paths() -> Result<Vec<String>> {
 
 /// Searches plugins and transforms `age::plugin::Recipient` to `age::Recipients`
 fn merge_plugin_recipients_and_recipients(
-    recipients: &mut Vec<Box<dyn age::Recipient>>,
+    recipients: &mut Vec<Box<dyn age::Recipient + Send>>,
     plugin_recipients: &[age::plugin::Recipient],
 ) -> Result<()> {
     // Get names of all required plugins from the recipients
@@ -163,7 +163,7 @@ pub(crate) fn encrypt<P: AsRef<Path>>(
         false,
     )?;
 
-    let mut recipients: Vec<Box<dyn age::Recipient>> = vec![];
+    let mut recipients: Vec<Box<dyn age::Recipient + Send>> = vec![];
     let mut plugin_recipients: Vec<age::plugin::Recipient> = vec![];
 
     for pubkey in public_keys {
@@ -172,7 +172,8 @@ pub(crate) fn encrypt<P: AsRef<Path>>(
 
     merge_plugin_recipients_and_recipients(&mut recipients, &plugin_recipients)?;
 
-    let encryptor = age::Encryptor::with_recipients(recipients);
+    let encryptor =
+        age::Encryptor::with_recipients(recipients).ok_or(eyre!("Missing recipients"))?;
 
     let mut output = encryptor
         .wrap_output(
@@ -198,7 +199,7 @@ pub(crate) fn rekey<P: AsRef<Path>>(
     identities: &[Box<dyn age::Identity>],
     public_keys: &[String],
 ) -> Result<()> {
-    let mut recipients: Vec<Box<dyn age::Recipient>> = vec![];
+    let mut recipients: Vec<Box<dyn age::Recipient + Send>> = vec![];
     let mut plugin_recipients: Vec<age::plugin::Recipient> = vec![];
 
     for pubkey in public_keys {
@@ -216,7 +217,8 @@ pub(crate) fn rekey<P: AsRef<Path>>(
             merge_plugin_recipients_and_recipients(&mut recipients, &plugin_recipients)?;
 
             // Create an encryptor for the (new) recipients to encrypt the file for
-            let encryptor = age::Encryptor::with_recipients(recipients);
+            let encryptor =
+                age::Encryptor::with_recipients(recipients).ok_or(eyre!("Missing recipients"))?;
             let mut ciphertext_writer = encryptor
                 .wrap_output(
                     ArmoredWriter::wrap_output(&outfile, Format::AsciiArmor)
