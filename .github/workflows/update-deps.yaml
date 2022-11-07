@@ -10,17 +10,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Install Nix
-        uses: cachix/install-nix-action@v15
+        uses: cachix/install-nix-action@v18
         with:
           extra_nix_config: |
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
             experimental-features = nix-command flakes
 
       - name: Get user data of PAT
-        uses: actions/github-script@v5
+        uses: actions/github-script@v6
         id: pat-user
         with:
           github-token: ${{ secrets.PAT }}
@@ -32,7 +32,6 @@ jobs:
             if (data.name == null) {
               data.name = data.login;
             }
-            console.log(data);
             return data
 
       - name: Configure Git with PAT user
