@@ -15,7 +15,7 @@ jobs:
     runs-on: macos-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Setup rust toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -23,15 +23,15 @@ jobs:
           toolchain: stable
           target: aarch64-apple-darwin
           override: true
-      - name: Cache cargo 
-        uses: actions/cache@v2
+      - name: Cache cargo
+        uses: actions/cache@v3
         with:
           path: |
             ~/.cargo/bin/
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
-            target
+            target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: Set SDKROOT
         run: echo "SDKROOT=$(xcrun -sdk macosx11.1 --show-sdk-path)" >> $GITHUB_ENV
@@ -41,4 +41,4 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --target aarch64-apple-darwin 
+          args: --target aarch64-apple-darwin
