@@ -1,82 +1,90 @@
 name: 'Update flake inputs & Cargo dependencies'
 
 on:
-  workflow_dispatch:
-  schedule:
-    - cron: '0 2 * * 0'
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  NIX_CONFIG: 'access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}'
 
 jobs:
   update-deps:
-    runs-on: ubuntu-latest
+    runs-on: [ ubuntu-latest ]
     steps:
-      - name: Checkout
+      - name: 'Checkout'
         uses: actions/checkout@v3
-
-      - name: Install Nix
-        uses: cachix/install-nix-action@v18
         with:
-          extra_nix_config: |
-            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
-            experimental-features = nix-command flakes
+          persist-credentials: false
 
-      - name: Get user data of PAT
+      - name: 'Get user data of token'
         uses: actions/github-script@v6
         id: pat-user
         with:
-          github-token: ${{ secrets.PAT }}
+          github-token: ${{ secrets.PR }}
           script: |
             const { data } = await github.request("/user");
             if (data.email == null) {
-              data.email = `${data.login}@users.noreply.github.com`;
+              data.email = `${data.id}+${data.login}@users.noreply.github.com`;
             }
             if (data.name == null) {
               data.name = data.login;
             }
+
+            core.exportVariable('GIT_USER_NAME', data.name);
+            core.exportVariable('GIT_USER_EMAIL', data.email);
+
             return data
 
-      - name: Configure Git with PAT user
+      - name: 'Configure Git with PR user'
         run: |
-          JSON='${{ steps.pat-user.outputs.result }}'
-          NAME="$(echo "$JSON"  | jq -r ".name")"
-          EMAIL="$(echo "$JSON" | jq -r ".email")"
+          git config user.name  "$GIT_USER_NAME"
+          git config user.email "$GIT_USER_EMAIL"
 
-          git config user.name  "$NAME"
-          git config user.email "$EMAIL"
-
-      - name: Update flake inputs and commit
+      - name: 'Update flake inputs and commit'
         run: |
           nix flake update --commit-lock-file
 
-      - name: Get flake metadata
-        id: flake-metadata
-        run: |
-          # The sed expression strips any control sequences (e.g., the bold text elements)
-          body="$(nix flake metadata | sed -E "s/[[:cntrl:]]\[[0-9]{1,3}m//g")"
-          # The following encoding is required to have proper multiline strings
-          # Also see: https://github.community/t/set-output-truncates-multiline-strings/16852/3
-          body="${body//'%'/'%25'}"
-          body="${body//$'\n'/'%0A'}"
-          body="${body//$'\r'/'%0D'}"
-          echo ::set-output name=body::$body
-
-      - name: Update Cargo dependencies and commit
-        run: |
-          . <(nix print-dev-env)
-          cargo update
-          git diff --quiet && git diff --staged --quiet || git commit -am 'Cargo.lock: Update'
-
-      - name: Create Pull Request
-        id: cpr
-        uses: peter-evans/create-pull-request@v3
+      - name: 'Install workflow step dependencies'
+        uses: yaxitech/nix-install-pkgs-action@v3
         with:
-          branch: update-deps
-          token: ${{ secrets.PAT }}
-          title: Update flake inputs and Cargo dependencies
+          packages: gnused
+
+      - name: 'Get flake metadata'
+        uses: actions/github-script@v6
+        id: flake-metadata
+        with:
+          result-encoding: string
+          script: |
+            const res = await exec.getExecOutput('nix', [ 'flake', 'metadata' ])
+              .then((resRaw) => {
+                // The sed expression strips any control sequences (e.g., the bold text elements)
+                return exec.getExecOutput(
+                  'sed',
+                  [ '-E', 's/[[:cntrl:]]\[[0-9]{1,3}m//g' ],
+                  { input: Buffer.from(resRaw.stdout) }
+                );
+              });
+
+            return res.stdout;
+
+      - name: 'Update Cargo dependencies and commit'
+        run: |
+          nix develop -c cargo update
+          (git diff --quiet && git diff --staged --quiet) || git commit -am 'Cargo.lock: Update'
+
+      - name: 'Create Pull Request'
+        uses: peter-evans/create-pull-request@v4
+        with:
+          branch: update-flake
+          token: ${{ secrets.PR }}
+          title: Update flake inputs
           body: |
             Updated Flake dependencies through `nix flake update`.
 
             ```
-            ${{ steps.flake-metadata.outputs.body }}
+            ${{ steps.flake-metadata.outputs.result }}
             ```
 
             Updated Cargo dependencies through `cargo update`.
