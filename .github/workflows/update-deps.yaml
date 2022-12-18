@@ -1,10 +1,9 @@
 name: 'Update flake inputs & Cargo dependencies'
 
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+  workflow_dispatch:
+  schedule:
+    - cron: '0 2 * * 0'
 
 env:
   NIX_CONFIG: 'access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}'
