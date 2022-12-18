@@ -18,6 +18,9 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: 'Install Nix'
+        uses: cachix/install-nix-action@v18
+
       - name: 'Get user data of token'
         uses: actions/github-script@v6
         id: pat-user
