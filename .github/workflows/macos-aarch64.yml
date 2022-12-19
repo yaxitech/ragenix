@@ -34,9 +34,9 @@ jobs:
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: Set SDKROOT
-        run: echo "SDKROOT=$(xcrun -sdk macosx11.1 --show-sdk-path)" >> $GITHUB_ENV
+        run: echo "SDKROOT=$(xcrun -sdk macosx11.1 --show-sdk-path)" >> "$GITHUB_ENV"
       - name: Set MACOSX_DEPLOYMENT_TARGET
-        run: echo "MACOSX_DEPLOYMENT_TARGET=$(xcrun -sdk macosx11.1 --show-sdk-platform-version)" >> $GITHUB_ENV
+        run: echo "MACOSX_DEPLOYMENT_TARGET=$(xcrun -sdk macosx11.1 --show-sdk-platform-version)" >> "$GITHUB_ENV"
       - name: Build
         uses: actions-rs/cargo@v1
         with:
