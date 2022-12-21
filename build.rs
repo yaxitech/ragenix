@@ -18,7 +18,7 @@ fn main() -> Result<(), Error> {
         }
         Ok(val) => val,
     };
-    println!("cargo:rustc-env=RAGENIX_NIX_BIN_PATH={}", nix_bin_path);
+    println!("cargo:rustc-env=RAGENIX_NIX_BIN_PATH={nix_bin_path}");
 
     // Make the paths to the shell completion files available as environment variables
     let outdir = match env::var_os("OUT_DIR") {

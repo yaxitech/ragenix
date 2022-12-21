@@ -66,7 +66,7 @@ fn build() -> Command {
         )
         .group(
             ArgGroup::new("action")
-                .args(&["edit", "rekey", "schema"])
+                .args(["edit", "rekey", "schema"])
                 .required(true),
         )
         .arg(

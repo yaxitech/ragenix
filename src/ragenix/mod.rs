@@ -108,7 +108,7 @@ pub(crate) fn validate_rules_file<P: AsRef<Path>>(path: P) -> Result<()> {
     if let Err(errors) = result {
         let error_msg = errors
             .into_iter()
-            .map(|err| format!(" - {}: {}", err.instance_path, err))
+            .map(|err| format!(" - {}: {err}", err.instance_path))
             .collect::<Vec<String>>()
             .join("\n");
         Err(eyre!(error_msg))
@@ -127,7 +127,7 @@ pub(crate) fn parse_rules<P: AsRef<Path>>(rules_path: P) -> Result<Vec<RagenixRu
     let mut rules: Vec<RagenixRule> = Vec::new();
     for (rel_path, val) in instance.as_object().unwrap().iter() {
         let dir = fs::canonicalize(rules_path.as_ref().parent().unwrap())?;
-        let p = dir.join(&rel_path);
+        let p = dir.join(rel_path);
         let public_keys = val.as_object().unwrap()["publicKeys"]
             .as_array()
             .unwrap()
