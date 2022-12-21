@@ -1,6 +1,6 @@
 # ragenix
 
-[![Build status](https://img.shields.io/github/workflow/status/yaxitech/ragenix/CI)](https://github.com/yaxitech/ragenix/actions?query=branch%3Amain)
+[![Build status](https://img.shields.io/github/actions/workflow/status/yaxitech/ragenix/main.yaml?branch=main)](https://github.com/yaxitech/ragenix/actions?query=branch%3Amain)
 [![License](https://img.shields.io/github/license/yaxitech/ragenix)](http://www.apache.org/licenses/LICENSE-2.0.html)
 [![Written in Rust](https://img.shields.io/badge/code-rust-orange)](https://www.rust-lang.org)
 [![ragenix(1)](https://img.shields.io/badge/man-ragenix(1)-blue)](https://htmlpreview.github.io/?https://github.com/yaxitech/ragenix/blob/main/docs/ragenix.1.html)
