@@ -91,7 +91,7 @@ fn edit_new_entry() -> Result<()> {
 
     let mut cmd = Command::cargo_bin(crate_name!())?;
     let assert = cmd
-        .current_dir(&dir.path())
+        .current_dir(dir.path())
         .arg("--edit")
         .arg("pandora.age")
         .env("EDITOR", format!("cp {}", &pandora.display()))
@@ -129,7 +129,7 @@ fn edit_new_entry_stdin() -> Result<()> {
 
     let mut cmd = Command::cargo_bin(crate_name!())?;
     let assert = cmd
-        .current_dir(&dir.path())
+        .current_dir(dir.path())
         .arg("--edit")
         .arg("pandora.age")
         .env("EDITOR", "-")
@@ -147,7 +147,7 @@ fn edit_new_entry_stdin() -> Result<()> {
 
     let mut cmd = Command::cargo_bin(crate_name!())?;
     let assert = cmd
-        .current_dir(&dir.path())
+        .current_dir(dir.path())
         .arg("--identity")
         .arg(privkey_path)
         .arg("--edit")
@@ -417,7 +417,7 @@ fn fails_for_invalid_recipient() -> Result<()> {
 
     let mut cmd = Command::cargo_bin(crate_name!())?;
     let assert = cmd
-        .current_dir(&dir.path())
+        .current_dir(dir.path())
         .arg("--edit")
         .arg("wurzelpfropf.txt.age")
         .env("EDITOR", "true")
