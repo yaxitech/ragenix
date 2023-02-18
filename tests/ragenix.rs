@@ -425,10 +425,7 @@ fn fails_for_invalid_recipient() -> Result<()> {
 
     assert
         .failure()
-        .stderr(predicate::str::contains(format!(
-            "Invalid recipient: {}",
-            invalid_key
-        )))
+        .stderr(predicate::str::contains(format!("Invalid recipient: {invalid_key}")))
         .stderr(predicate::str::contains(
             "Make sure you use an ssh-ed25519, ssh-rsa or an X25519 public key, alternatively install an age plugin which supports your key",
         ));
