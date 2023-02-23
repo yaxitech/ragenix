@@ -189,18 +189,18 @@
             } ''
             set -euo pipefail
 
-            header "Generate roff and HTML manpage"
+            echo "Generate roff and HTML manpage"
             ln -s ${self}/docs/ragenix.1.ronn .
             ronn ragenix.1.ronn
 
-            header "roff: strip date"
+            echo "roff: strip date"
             tail -n '+5' ${self}/docs/ragenix.1 > ragenix.1.old
             tail -n '+5'              ragenix.1 > ragenix.1.new
 
             diff -u ragenix.1.{old,new} > diff \
               || (printf "roff: error, not up-to-date:\n\n%s\n" "$(cat diff)" >&2 && exit 1)
 
-            header "html: strip date"
+            echo "html: strip date"
             grep -v "<li class='tc'>" ${self}/docs/ragenix.1.html > ragenix.1.html.old
             grep -v "<li class='tc'>"              ragenix.1.html > ragenix.1.html.new
 

@@ -15,15 +15,15 @@ fn main() -> Result<()> {
     } else {
         if let Err(report) = ragenix::validate_rules_file(&opts.rules) {
             eprintln!(
-                "error: secrets rules are invalid: '{}'\n{}",
-                &opts.rules, report
+                "error: secrets rules are invalid: '{}'\n{report}",
+                &opts.rules
             );
             process::exit(1);
         }
 
         let rules = ragenix::parse_rules(&opts.rules)?;
         if opts.verbose {
-            println!("{:#?}", rules);
+            println!("{rules:#?}");
         }
 
         let identities = opts.identities.unwrap_or_default();

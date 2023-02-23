@@ -91,7 +91,7 @@ fn edit_new_entry() -> Result<()> {
 
     let mut cmd = Command::cargo_bin(crate_name!())?;
     let assert = cmd
-        .current_dir(&dir.path())
+        .current_dir(dir.path())
         .arg("--edit")
         .arg("pandora.age")
         .env("EDITOR", format!("cp {}", &pandora.display()))
@@ -129,7 +129,7 @@ fn edit_new_entry_stdin() -> Result<()> {
 
     let mut cmd = Command::cargo_bin(crate_name!())?;
     let assert = cmd
-        .current_dir(&dir.path())
+        .current_dir(dir.path())
         .arg("--edit")
         .arg("pandora.age")
         .env("EDITOR", "-")
@@ -147,7 +147,7 @@ fn edit_new_entry_stdin() -> Result<()> {
 
     let mut cmd = Command::cargo_bin(crate_name!())?;
     let assert = cmd
-        .current_dir(&dir.path())
+        .current_dir(dir.path())
         .arg("--identity")
         .arg(privkey_path)
         .arg("--edit")
@@ -417,7 +417,7 @@ fn fails_for_invalid_recipient() -> Result<()> {
 
     let mut cmd = Command::cargo_bin(crate_name!())?;
     let assert = cmd
-        .current_dir(&dir.path())
+        .current_dir(dir.path())
         .arg("--edit")
         .arg("wurzelpfropf.txt.age")
         .env("EDITOR", "true")
@@ -425,10 +425,7 @@ fn fails_for_invalid_recipient() -> Result<()> {
 
     assert
         .failure()
-        .stderr(predicate::str::contains(format!(
-            "Invalid recipient: {}",
-            invalid_key
-        )))
+        .stderr(predicate::str::contains(format!("Invalid recipient: {invalid_key}")))
         .stderr(predicate::str::contains(
             "Make sure you use an ssh-ed25519, ssh-rsa or an X25519 public key, alternatively install an age plugin which supports your key",
         ));
