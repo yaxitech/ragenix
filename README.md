@@ -23,7 +23,7 @@ secrets or switching from `agenix` to `ragenix` is easy: just follow the origina
 https://github.com/ryantm/agenix#installation) while replacing references to
 `github.com/ryantm/agenix` with `github.com/yaxitech/ragenix`. Everything else should remain the
 same as the `ragenix` package provides aliases for a) an `agenix` package and b) the `agenix` binary.
-The flake also exposes a NixOS module which is passed through from the `agenix` flake.
+The flake also exposes a NixOS and Darwin module which is passed through from the `agenix` flake.
 
 ## Usage
 
