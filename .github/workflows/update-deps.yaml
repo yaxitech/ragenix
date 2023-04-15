@@ -18,7 +18,7 @@ jobs:
           persist-credentials: false
 
       - name: 'Install Nix'
-        uses: cachix/install-nix-action@v18
+        uses: cachix/install-nix-action@v20
 
       - name: 'Get user data of token'
         uses: actions/github-script@v6
