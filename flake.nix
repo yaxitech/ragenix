@@ -238,7 +238,7 @@
             rust-analyzer
           ];
 
-          RAGENIX_NIX_BIN_PATH = "${pkgs.nix}/bin/nix";
+          RAGENIX_NIX_BIN_PATH = lib.getExe pkgs.nix;
 
           RUST_SRC_PATH = "${pkgs.rustToolchain}/lib/rustlib/src/rust/library";
 
