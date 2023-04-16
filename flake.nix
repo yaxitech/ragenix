@@ -293,12 +293,10 @@
             '';
           };
 
-        checks.tests-recursive-nix = pkgs.ragenix.overrideAttrs (_: {
+        checks.tests-recursive-nix = (pkgs.ragenix.override {
+          enableRecursiveNixTests = true;
+        }).overrideAttrs (_: {
           name = "tests-recursive-nix";
-          cargoCheckFeatures = [ "recursive-nix" ];
-          requiredSystemFeatures = [ "recursive-nix" ];
-          # No need to run the formatting checks again
-          codeStyleConformanceCheck = "true";
         });
 
         checks.rekey = pkgs.runCommand "run-rekey"
