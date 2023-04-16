@@ -48,7 +48,7 @@ craneLib.buildPackage (commonArgs // {
   inherit cargoArtifacts;
 
   cargoTestExtraArgs = lib.optionalString (!enableRecursiveNixTests) "--no-default-features";
-  requiredSystemFeatures = lib.optionals (enableRecursiveNixTests) [ "recursive-nix" ];
+  requiredSystemFeatures = lib.optionals enableRecursiveNixTests [ "recursive-nix" ];
 
   postInstall = ''
     set -euo pipefail
