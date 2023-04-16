@@ -8,6 +8,9 @@
 , openssl
 , pkg-config
 , plugins ? [ ]
+  # Allowing running the tests without the "recursive-nix" feature to allow
+  # building the package without having a recursive-nix-enabled Nix.
+, enableRecursiveNixTests ? false
 }:
 let
   commonArgs = {
@@ -44,9 +47,8 @@ in
 craneLib.buildPackage (commonArgs // {
   inherit cargoArtifacts;
 
-  # Run the tests without the "recursive-nix" feature to allow
-  # building the package without having a recursive-nix-enabled Nix.
-  cargoTestExtraArgs = "--no-default-features";
+  cargoTestExtraArgs = lib.optionalString (!enableRecursiveNixTests) "--no-default-features";
+  requiredSystemFeatures = lib.optionals enableRecursiveNixTests [ "recursive-nix" ];
 
   postInstall = ''
     set -euo pipefail
