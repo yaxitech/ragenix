@@ -146,7 +146,7 @@ mod test_split_editor {
 
     #[test]
     fn parse_editor_complex_2() -> Result<()> {
-        let actual = split_editor(r#"sed -i 's/.*/ x  /'"#)?;
+        let actual = split_editor(r"sed -i 's/.*/ x  /'")?;
         let expected = (
             String::from("sed"),
             Some(vec![String::from("-i"), String::from("s/.*/ x  /")]),
@@ -157,7 +157,7 @@ mod test_split_editor {
 
     #[test]
     fn parse_editor_stdin() -> Result<()> {
-        let actual = split_editor(r#" - "#)?;
+        let actual = split_editor(r" - ")?;
         let expected = (String::from("-"), None);
         assert_eq!(actual, expected);
         Ok(())
