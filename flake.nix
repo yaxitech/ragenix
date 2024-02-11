@@ -325,6 +325,8 @@
                 set -euo pipefail
                 find target/**/release/examples -name ${pname} \
                   -exec install -D {} $out/bin/${pname} \;
+                # strip.sh uses unset variables
+                set +u
               '';
             });
             plugins = [ rageExamplePlugin ];
