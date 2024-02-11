@@ -125,7 +125,7 @@ pub(crate) fn parse_rules<P: AsRef<Path>>(rules_path: P) -> Result<Vec<RagenixRu
 
     // It's fine to force unwrap here as we validated the JSON schema
     let mut rules: Vec<RagenixRule> = Vec::new();
-    for (rel_path, val) in instance.as_object().unwrap().iter() {
+    for (rel_path, val) in instance.as_object().unwrap() {
         let dir = fs::canonicalize(rules_path.as_ref().parent().unwrap())?;
         let p = dir.join(rel_path);
         let public_keys = val.as_object().unwrap()["publicKeys"]
