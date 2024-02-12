@@ -16,11 +16,11 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: 'Checkout source'
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: 'Install Nix Flakes'
-        uses: cachix/install-nix-action@v20
+        uses: cachix/install-nix-action@v25
       - name: 'Setup Cachix'
-        uses: cachix/cachix-action@v12
+        uses: cachix/cachix-action@v14
         with:
           name: wurzelpfropf
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN_PUBLIC }}'
@@ -35,15 +35,15 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: 'Checkout source'
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: 'Install Nix Flakes (nixos-test, recursive-nix)'
-        uses: cachix/install-nix-action@v20
+        uses: cachix/install-nix-action@v25
         with:
           extra_nix_config: |
             experimental-features = nix-command flakes recursive-nix
             system-features = nixos-test benchmark big-parallel kvm recursive-nix
       - name: 'Setup Cachix'
-        uses: cachix/cachix-action@v12
+        uses: cachix/cachix-action@v14
         with:
           name: wurzelpfropf
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN_PUBLIC }}'
