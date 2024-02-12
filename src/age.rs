@@ -9,7 +9,10 @@ use std::{
 
 use age::{
     armor::{ArmoredReader, ArmoredWriter, Format},
-    cli_common::file_io::{InputReader, OutputFormat, OutputWriter},
+    cli_common::{
+        file_io::{InputReader, OutputFormat, OutputWriter},
+        StdinGuard,
+    },
     decryptor::RecipientsDecryptor,
 };
 
@@ -115,7 +118,13 @@ pub(crate) fn get_identities(identity_paths: &[String]) -> Result<Vec<Box<dyn ag
     if identities.is_empty() {
         Err(eyre!("No usable identity or identities"))
     } else {
-        Ok(age::cli_common::read_identities(identities, None)?)
+        // Error out if an identity is tried to be read from stdin
+        let mut stdin_guard = StdinGuard::new(true);
+        Ok(age::cli_common::read_identities(
+            identities,
+            None,
+            &mut stdin_guard,
+        )?)
     }
 }
 
@@ -138,7 +147,7 @@ pub(crate) fn decrypt<P: AsRef<Path>>(
                 .to_str()
                 .map(std::string::ToString::to_string);
             let mut ciphertext_writer =
-                OutputWriter::new(output, OutputFormat::Unknown, output_file_mode, false)?;
+                OutputWriter::new(output, true, OutputFormat::Unknown, output_file_mode, false)?;
             io::copy(&mut plaintext_reader, &mut ciphertext_writer)?;
             Ok(())
         })
@@ -158,6 +167,7 @@ pub(crate) fn encrypt<P: AsRef<Path>>(
     // Create an output to the user-requested location.
     let output = OutputWriter::new(
         output_file.as_ref().to_str().map(str::to_string),
+        true,
         OutputFormat::Text,
         output_file_mode,
         false,

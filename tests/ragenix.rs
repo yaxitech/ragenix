@@ -142,7 +142,7 @@ fn edit_new_entry_stdin() -> Result<()> {
     let privkey_path = dir.path().join("key.txt");
     fs::write(
         &privkey_path,
-        "AGE-SECRET-KEY-1C744H5LMUVHGVLX8HXAWA9ENXXXJ6R6F89V5AGEDXXD8GECQ624QQUXKHX",
+        "AGE-SECRET-KEY-1C744H5LMUVHGVLX8HXAWA9ENXXXJ6R6F89V5AGEDXXD8GECQ624QQUXKHX\n",
     )?;
 
     let mut cmd = Command::cargo_bin(crate_name!())?;
