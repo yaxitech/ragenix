@@ -364,8 +364,8 @@
       # SYSTEM-INDEPENDENT OUTPUTS
       #
       {
-        # Passthrough the agenix NixOS and Darwin module
-        inherit (agenix) nixosModules darwinModules;
+        # Passthrough the agenix NixOS, Darwin and Home Manager modules
+        inherit (agenix) nixosModules darwinModules homeManagerModules;
 
         # Overlay to add ragenix and replace agenix
         overlays.default = _final: prev: rec {
