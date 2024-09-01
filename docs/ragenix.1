@@ -1,6 +1,6 @@
-.\" generated with Ronn-NG/v0.9.1
-.\" http://github.com/apjanke/ronn-ng/tree/0.9.1
-.TH "RAGENIX" "1" "January 2022" ""
+.\" generated with Ronn-NG/v0.10.1
+.\" http://github.com/apjanke/ronn-ng/tree/0.10.1
+.TH "RAGENIX" "1" "January 1980" ""
 .SH "NAME"
 \fBragenix\fR \- age\-encrypted secrets for Nix
 .SH "SYNOPSIS"
@@ -32,6 +32,13 @@ Giving the special token \fB\-\fR as a \fIPROGRAM\fR causes \fBragenix\fR to rea
 .TP
 \fB\-r\fR, \fB\-\-rekey\fR
 Decrypt all secrets given in the rules configuration file and encrypt them with the defined public keys\. If a secret file does not exist yet, it is ignored\. This option is useful to grant a new recipient access to one or multiple secrets\.
+.IP
+If the \fB\-\-identity\fR option is not given, \fBragenix\fR tries to decrypt \fIPATH\fR with the default SSH private keys\. See \fB\-\-identity\fR for details\.
+.IP
+When rekeying, \fBragenix\fR does not write any plaintext data to disk; all processing happens in\-memory\.
+.TP
+\fB\-R\fR, \fB\-\-rekey\-one\fR \fIPATH\fR
+Decrypt specified secrets given in the rules configuration file and encrypt them with the defined public keys\. This option is useful to grant a new recipient access to specific secrets\.
 .IP
 If the \fB\-\-identity\fR option is not given, \fBragenix\fR tries to decrypt \fIPATH\fR with the default SSH private keys\. See \fB\-\-identity\fR for details\.
 .IP

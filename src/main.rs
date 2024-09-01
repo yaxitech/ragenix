@@ -1,5 +1,5 @@
 use color_eyre::eyre::{eyre, Result};
-use std::{env, fs, path::Path, process};
+use std::{env, path::PathBuf, process};
 
 mod age;
 mod cli;
@@ -29,10 +29,7 @@ fn main() -> Result<()> {
         let identities = opts.identities.unwrap_or_default();
 
         if let Some(path) = &opts.edit {
-            let path_normalized = util::normalize_path(Path::new(path));
-            let edit_path = std::env::current_dir()
-                .and_then(fs::canonicalize)
-                .map(|p| p.join(path_normalized))?;
+            let edit_path = util::canonicalize_rule_path(path)?;
             let rule = rules
                 .into_iter()
                 .find(|x| x.path == edit_path)
@@ -42,7 +39,18 @@ fn main() -> Result<()> {
             let editor = &opts.editor.unwrap();
             ragenix::edit(&rule, &identities, editor, &mut std::io::stdout())?;
         } else if opts.rekey {
-            ragenix::rekey(&rules, &identities, &mut std::io::stdout())?;
+            ragenix::rekey(&rules, &identities, true, &mut std::io::stdout())?;
+        } else if let Some(paths) = opts.rekey_chosen {
+            let paths_normalized = paths
+                .into_iter()
+                .map(util::canonicalize_rule_path)
+                .collect::<Result<Vec<PathBuf>>>()?;
+            let chosen_rules = rules
+                .into_iter()
+                .filter(|x| paths_normalized.contains(&x.path))
+                .collect::<Vec<ragenix::RagenixRule>>();
+
+            ragenix::rekey(&chosen_rules, &identities, false, &mut std::io::stdout())?;
         }
     }
 
