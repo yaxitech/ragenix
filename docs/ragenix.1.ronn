@@ -45,9 +45,10 @@ store.
     standard input. In this case, `ragenix` stream-encrypts data from standard
     input only and does not open the file for editing.
 
-* `-r`, `--rekey`:
-    Decrypt all secrets given in the rules configuration file and encrypt them
-    with the defined public keys. If a secret file does not exist yet, it is
+* `-r`, `--rekey` [PATH]:
+    Decrypt secrets given in the rules configuration file and encrypt them
+    with the defined public keys. If no paths are given, rekey all secrets.
+    If no paths are given and a secret file does not exist yet, it is
     ignored. This option is useful to grant a new recipient access to one or
     multiple secrets.
 

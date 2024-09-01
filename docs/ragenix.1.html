@@ -127,10 +127,10 @@ store.</p>
   input only and does not open the file for editing.</p>
 </dd>
 <dt>
-<code>-r</code>, <code>--rekey</code>
-</dt>
-<dd>  Decrypt all secrets given in the rules configuration file and encrypt them
-  with the defined public keys. If a secret file does not exist yet, it is
+<code>-r</code>, <code>--rekey</code> [PATH]</dt>
+<dd>  Decrypt secrets given in the rules configuration file and encrypt them
+  with the defined public keys. If no paths are given, rekey all secrets.
+  If no paths are given and a secret file does not exist yet, it is
   ignored. This option is useful to grant a new recipient access to one or
   multiple secrets.
 
@@ -268,7 +268,7 @@ ragenix.override { plugins = [ age-plugin-yubikey ]; }
 
   <ol class='man-decor man-foot man foot'>
     <li class='tl'></li>
-    <li class='tc'>January 2022</li>
+    <li class='tc'>January 1980</li>
     <li class='tr'>ragenix(1)</li>
   </ol>
 
