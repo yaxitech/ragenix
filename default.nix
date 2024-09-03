@@ -11,6 +11,7 @@
   # Allowing running the tests without the "recursive-nix" feature to allow
   # building the package without having a recursive-nix-enabled Nix.
 , enableRecursiveNixTests ? false
+, target ? stdenv.targetPlatform.rust.cargoShortTarget
 }:
 let
   commonArgs = {
@@ -46,6 +47,8 @@ let
 in
 craneLib.buildPackage (commonArgs // {
   inherit cargoArtifacts;
+
+  cargoExtraArgs = "--target ${target}";
 
   cargoTestExtraArgs = lib.optionalString (!enableRecursiveNixTests) "--no-default-features";
   requiredSystemFeatures = lib.optionals enableRecursiveNixTests [ "recursive-nix" ];

@@ -237,6 +237,15 @@
       })
       )
       #
+      # PACKAGES SPECIFIC TO LINUX SYSTEMS
+      #
+      (eachLinuxSystem (pkgs: {
+        packages.ragenix-static = self.packages.${pkgs.stdenv.system}.ragenix.override {
+          target = pkgs.pkgsStatic.stdenv.targetPlatform.rust.cargoShortTarget;
+        };
+        packages.default = self.packages.${pkgs.stdenv.system}.ragenix-static;
+      }))
+      #
       # CHECKS SPECIFIC TO LINUX SYSTEMS
       #
       (eachLinuxSystem (pkgs: {
@@ -359,7 +368,7 @@
 
         # Overlay to add ragenix and replace agenix
         overlays.default = _final: prev: rec {
-          ragenix = self.packages.${prev.stdenv.hostPlatform.system}.ragenix;
+          ragenix = self.packages.${prev.stdenv.hostPlatform.system}.default;
           agenix = ragenix;
         };
       }
