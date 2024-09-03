@@ -103,14 +103,14 @@ where
 
     Opts {
         edit: matches.get_one::<String>("edit").cloned(),
-        editor: matches.get_one::<String>("editor").map(Clone::clone),
+        editor: matches.get_one::<String>("editor").cloned(),
         identities: matches
             .get_many::<String>("identity")
             .map(|vals| vals.cloned().collect::<Vec<_>>()),
         rekey: matches.get_flag("rekey"),
         rules: matches
             .get_one::<String>("rules")
-            .map(Clone::clone)
+            .cloned()
             .expect("Should never happen"),
         schema: matches.get_flag("schema"),
         verbose: matches.get_flag("verbose"),
