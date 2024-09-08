@@ -7,12 +7,8 @@
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
-      inputs.flake-utils.follows = "flake-utils";
     };
-    crane = {
-      url = "github:ipetkov/crane";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    crane.url = "github:ipetkov/crane";
     agenix = {
       url = "github:ryantm/agenix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -55,18 +51,12 @@
         # `nix build`
         packages.${name} = pkgs.callPackage ./default.nix { };
         packages.default = packages.${name};
-        defaultPackage = lib.warnIf (builtins.compareVersions builtins.nixVersion "2.7" >= 0)
-          "ragenix's flake output `defaultPackage` is deprecated in favor of `packages.default` for Nix >= 2.7"
-          packages.default;
 
         # `nix run`
         apps.${name} = flake-utils.lib.mkApp {
           drv = packages.${name};
         };
         apps.default = apps.${name};
-        defaultApp = lib.warnIf (builtins.compareVersions builtins.nixVersion "2.7" >= 0)
-          "ragenix's flake output `defaultApp` is deprecated in favor of `apps.default` for Nix >= 2.7"
-          apps.default;
 
         # Regenerate the roff and HTML manpages and commit the changes, if any
         apps.update-manpage = flake-utils.lib.mkApp {
@@ -247,6 +237,15 @@
       })
       )
       #
+      # PACKAGES SPECIFIC TO LINUX SYSTEMS
+      #
+      (eachLinuxSystem (pkgs: {
+        packages.ragenix-static = self.packages.${pkgs.stdenv.system}.ragenix.override {
+          target = pkgs.pkgsStatic.stdenv.targetPlatform.rust.cargoShortTarget;
+        };
+        packages.default = self.packages.${pkgs.stdenv.system}.ragenix-static;
+      }))
+      #
       # CHECKS SPECIFIC TO LINUX SYSTEMS
       #
       (eachLinuxSystem (pkgs: {
@@ -369,13 +368,9 @@
 
         # Overlay to add ragenix and replace agenix
         overlays.default = _final: prev: rec {
-          ragenix = self.packages.${prev.stdenv.hostPlatform.system}.ragenix;
+          ragenix = self.packages.${prev.stdenv.hostPlatform.system}.default;
           agenix = ragenix;
         };
-
-        overlay = lib.warnIf (builtins.compareVersions builtins.nixVersion "2.7" >= 0)
-          "ragenix's flake output `overlay` is deprecated in favor of `overlays.default` for Nix >= 2.7"
-          self.overlays.default;
       }
     ];
 }
