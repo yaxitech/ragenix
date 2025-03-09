@@ -216,7 +216,7 @@
         '';
 
         # `nix develop`
-        devShell = pkgs.mkShell {
+        devShells.default = pkgs.mkShell {
           name = "${name}-dev-shell";
 
           inputsFrom = [ self.packages."${pkgs.stdenv.system}".ragenix ];
