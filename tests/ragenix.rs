@@ -368,6 +368,89 @@ fn rekeying_fails_no_valid_identites() -> Result<()> {
 }
 
 #[test]
+#[cfg_attr(not(feature = "recursive-nix"), ignore)]
+fn rekeying_one_works() -> Result<()> {
+    let (_dir, path) = copy_example_to_tmpdir()?;
+
+    let files = &["root.passwd.age"];
+    let expected = files
+        .iter()
+        .map(|s| path.join(s))
+        .map(|p| format!("Rekeying {}", p.display()))
+        .collect::<Vec<String>>()
+        .join("\n")
+        + "\n";
+
+    let mut cmd = Command::cargo_bin(crate_name!())?;
+    let assert = cmd
+        .current_dir(&path)
+        .arg("--rekey-one")
+        .arg(files[0])
+        .arg("--identity")
+        .arg("keys/id_ed25519")
+        .assert();
+
+    assert.success().stdout(expected);
+
+    Ok(())
+}
+
+#[test]
+#[cfg_attr(not(feature = "recursive-nix"), ignore)]
+fn rekeying_one_multiple_works() -> Result<()> {
+    let (_dir, path) = copy_example_to_tmpdir()?;
+
+    let files = &["github-runner.token.age", "root.passwd.age"];
+    let expected = files
+        .iter()
+        .map(|s| path.join(s))
+        .map(|p| format!("Rekeying {}", p.display()))
+        .collect::<Vec<String>>()
+        .join("\n")
+        + "\n";
+
+    let mut cmd = Command::cargo_bin(crate_name!())?;
+    let assert = cmd
+        .current_dir(&path)
+        .arg("--rekey-one")
+        .arg(files[0])
+        .arg("--rekey-one")
+        .arg(files[1])
+        .arg("--identity")
+        .arg("keys/id_ed25519")
+        .assert();
+
+    assert.success().stdout(expected);
+
+    Ok(())
+}
+
+#[test]
+#[cfg_attr(not(feature = "recursive-nix"), ignore)]
+fn rekeying_one_fails_not_existing_files() -> Result<()> {
+    let (_dir, path) = copy_example_to_tmpdir()?;
+
+    let missing_file = path.join("root.passwd.age");
+    fs::remove_file(&missing_file)?;
+
+    let mut cmd = Command::cargo_bin(crate_name!())?;
+    let assert = cmd
+        .current_dir(&path)
+        .arg("--rekey-one")
+        .arg(&missing_file)
+        .arg("--identity")
+        .arg("keys/id_ed25519")
+        .assert();
+
+    assert.failure().stderr(predicate::str::contains(format!(
+        "Does not exist: {}",
+        missing_file.display()
+    )));
+
+    Ok(())
+}
+
+#[test]
 fn prints_schema() -> Result<()> {
     let mut cmd = Command::cargo_bin(crate_name!())?;
     let assert = cmd.arg("--schema").assert();
