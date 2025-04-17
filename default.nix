@@ -77,4 +77,6 @@ craneLib.buildPackage (commonArgs // {
   '';
 
   passthru.cargoArtifacts = cargoArtifacts;
+
+  meta.mainProgram = "ragenix";
 })
