@@ -452,7 +452,7 @@ fn decrypt_works() -> Result<()> {
     // The example file contains a specific token value
     assert
         .success()
-        .stdout(predicate::str::contains("ghp_verysecrettokendontlook"));
+        .stdout(predicate::str::contains("wurzelpfropf!"));
 
     Ok(())
 }
@@ -491,13 +491,11 @@ fn decrypt_with_identity_file() -> Result<()> {
         .arg(file)
         .arg("--identity")
         .arg("keys/id_ed25519")
-        .arg("--identity")
-        .arg("keys/id_rsa")
         .assert();
 
     assert
         .success()
-        .stdout(predicate::str::contains("ghp_verysecrettokendontlook"));
+        .stdout(predicate::str::contains("wurzelpfropf!"));
 
     Ok(())
 }
