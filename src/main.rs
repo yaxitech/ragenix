@@ -10,7 +10,21 @@ fn main() -> Result<()> {
     color_eyre::install()?;
     let opts = cli::parse_args(env::args());
 
-    if opts.schema {
+    if let Some(path) = &opts.decrypt {
+        // Handle decryption
+        let identities = opts.identities.unwrap_or_default();
+        let path = Path::new(path);
+
+        if !path.exists() {
+            eprintln!("Error: File '{}' does not exist", path.display());
+            process::exit(1);
+        }
+
+        if let Err(e) = ragenix::decrypt_to_writer(path, &identities, &mut std::io::stdout()) {
+            eprintln!("Error decrypting file: {}", e);
+            process::exit(1);
+        }
+    } else if opts.schema {
         print!("{}", ragenix::AGENIX_JSON_SCHEMA_STRING);
     } else {
         if let Err(report) = ragenix::validate_rules_file(&opts.rules) {

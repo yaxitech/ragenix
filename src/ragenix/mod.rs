@@ -212,3 +212,26 @@ pub(crate) fn edit(
 
     Ok(())
 }
+
+/// Decrypt an age-encrypted file and output to a writer (typically stdout)
+pub(crate) fn decrypt_to_writer(
+    path: &Path,
+    identity_paths: &[String],
+    mut writer: impl Write,
+) -> Result<()> {
+    let identities = age::get_identities(identity_paths)?;
+
+    // Create a temporary file to decrypt to
+    let dir = tempfile::tempdir()?;
+    fs::set_permissions(&dir, PermissionsExt::from_mode(0o700))?;
+    let decrypted_path = dir.path().join("decrypted");
+
+    // Decrypt to the temporary file
+    age::decrypt(path, &decrypted_path, &identities)?;
+
+    // Read the decrypted content and write to the writer
+    let content = fs::read(&decrypted_path)?;
+    writer.write_all(&content)?;
+
+    Ok(())
+}

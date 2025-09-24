@@ -9,6 +9,7 @@ use clap::{
 #[allow(dead_code)] // False positive
 #[derive(Debug, Clone)]
 pub(crate) struct Opts {
+    pub decrypt: Option<String>,
     pub edit: Option<String>,
     pub editor: Option<String>,
     pub identities: Option<Vec<String>>,
@@ -23,6 +24,15 @@ fn build() -> Command {
         .version(crate_version!())
         .author(crate_authors!())
         .about(crate_description!())
+        .arg(
+            Arg::new("decrypt")
+                .help("decrypts the age-encrypted FILE to stdout")
+                .long("decrypt")
+                .short('d')
+                .num_args(1)
+                .value_name("FILE")
+                .value_hint(ValueHint::FilePath),
+        )
         .arg(
             Arg::new("edit")
                 .help("edits the age-encrypted FILE using $EDITOR")
@@ -66,7 +76,7 @@ fn build() -> Command {
         )
         .group(
             ArgGroup::new("action")
-                .args(["edit", "rekey", "schema"])
+                .args(["decrypt", "edit", "rekey", "schema"])
                 .required(true),
         )
         .arg(
@@ -102,6 +112,7 @@ where
     let matches = app.get_matches_from(itr);
 
     Opts {
+        decrypt: matches.get_one::<String>("decrypt").cloned(),
         edit: matches.get_one::<String>("edit").cloned(),
         editor: matches.get_one::<String>("editor").cloned(),
         identities: matches
