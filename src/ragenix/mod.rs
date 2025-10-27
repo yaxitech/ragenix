@@ -3,7 +3,7 @@ use color_eyre::{
     Help, SectionExt,
 };
 use jsonschema::JSONSchema;
-use lazy_static::lazy_static;
+use std::sync::LazyLock;
 use std::{
     fs::{self, OpenOptions},
     io::{self, Write},
@@ -16,10 +16,8 @@ use crate::{age, util};
 
 pub(crate) static AGENIX_JSON_SCHEMA_STRING: &str = std::include_str!("agenix.schema.json");
 
-lazy_static! {
-    static ref AGENIX_JSON_SCHEMA: serde_json::Value =
-        serde_json::from_str(AGENIX_JSON_SCHEMA_STRING).expect("Valid schema!");
-}
+static AGENIX_JSON_SCHEMA: LazyLock<serde_json::Value> =
+    LazyLock::new(|| serde_json::from_str(AGENIX_JSON_SCHEMA_STRING).expect("Valid schema!"));
 
 /// Reads the rules file using Nix to output the attribute set as a JSON string.
 /// Return value is parsed into a serde JSON value.
