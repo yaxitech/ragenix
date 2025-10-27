@@ -36,8 +36,6 @@ let
     # runtime dependencies
     buildInputs = [
       openssl
-    ] ++ lib.optionals stdenv.isDarwin [
-      darwin.Security
     ];
 
     # Absolute path to the `nix` binary, used in `build.rs`
