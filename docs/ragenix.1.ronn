@@ -57,6 +57,17 @@ store.
     When rekeying, `ragenix` does not write any plaintext data to disk; all
     processing happens in-memory.
 
+* `-R`, `--rekey-one` <PATH>:
+    Decrypt specified secrets given in the rules configuration file and encrypt
+    them with the defined public keys. This option is useful to grant a new
+    recipient access to specific secrets.
+
+    If the `--identity` option is not given, `ragenix` tries to decrypt <PATH>
+    with the default SSH private keys. See `--identity` for details.
+
+    When rekeying, `ragenix` does not write any plaintext data to disk; all
+    processing happens in-memory.
+
 ## COMMON OPTIONS
 
 * `--rules` <PATH>:
