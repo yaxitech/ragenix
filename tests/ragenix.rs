@@ -432,3 +432,70 @@ fn fails_for_invalid_recipient() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+#[cfg_attr(not(feature = "recursive-nix"), ignore)]
+fn decrypt_works() -> Result<()> {
+    let (_dir, path) = copy_example_to_tmpdir()?;
+
+    let file = "github-runner.token.age";
+
+    let mut cmd = Command::cargo_bin(crate_name!())?;
+    let assert = cmd
+        .current_dir(&path)
+        .arg("--decrypt")
+        .arg(file)
+        .arg("--identity")
+        .arg("keys/id_ed25519")
+        .assert();
+
+    // The example file contains a specific token value
+    assert
+        .success()
+        .stdout(predicate::str::contains("wurzelpfropf!"));
+
+    Ok(())
+}
+
+#[test]
+#[cfg_attr(not(feature = "recursive-nix"), ignore)]
+fn decrypt_missing_file_errors() -> Result<()> {
+    let dir = tempfile::tempdir()?;
+
+    let mut cmd = Command::cargo_bin(crate_name!())?;
+    let assert = cmd
+        .current_dir(dir.path())
+        .arg("--decrypt")
+        .arg("nonexistent.age")
+        .assert();
+
+    assert
+        .failure()
+        .stderr(predicate::str::contains("does not exist"));
+
+    Ok(())
+}
+
+#[test]
+#[cfg_attr(not(feature = "recursive-nix"), ignore)]
+fn decrypt_with_identity_file() -> Result<()> {
+    let (_dir, path) = copy_example_to_tmpdir()?;
+
+    let file = "github-runner.token.age";
+
+    // Test with explicit identity file
+    let mut cmd = Command::cargo_bin(crate_name!())?;
+    let assert = cmd
+        .current_dir(&path)
+        .arg("--decrypt")
+        .arg(file)
+        .arg("--identity")
+        .arg("keys/id_ed25519")
+        .assert();
+
+    assert
+        .success()
+        .stdout(predicate::str::contains("wurzelpfropf!"));
+
+    Ok(())
+}
