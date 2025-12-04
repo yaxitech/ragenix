@@ -13,6 +13,7 @@ pub(crate) struct Opts {
     pub editor: Option<String>,
     pub identities: Option<Vec<String>>,
     pub rekey: bool,
+    pub rekey_chosen: Option<Vec<String>>,
     pub rules: String,
     pub schema: bool,
     pub verbose: bool,
@@ -41,6 +42,15 @@ fn build() -> Command {
                 .action(ArgAction::SetTrue),
         )
         .arg(
+            Arg::new("rekey-one")
+                .help("re-encrypts specified secrets with specified recipients")
+                .long("rekey-one")
+                .short('R')
+                .value_name("FILE")
+                .action(ArgAction::Append)
+                .value_hint(ValueHint::FilePath),
+        )
+        .arg(
             Arg::new("identity")
                 .help("private key to use when decrypting")
                 .long("identity")
@@ -66,7 +76,7 @@ fn build() -> Command {
         )
         .group(
             ArgGroup::new("action")
-                .args(["edit", "rekey", "schema"])
+                .args(["edit", "rekey", "rekey-one", "schema"])
                 .required(true),
         )
         .arg(
@@ -108,6 +118,9 @@ where
             .get_many::<String>("identity")
             .map(|vals| vals.cloned().collect::<Vec<_>>()),
         rekey: matches.get_flag("rekey"),
+        rekey_chosen: matches
+            .get_many::<String>("rekey-one")
+            .map(|vals| vals.cloned().collect::<Vec<_>>()),
         rules: matches
             .get_one::<String>("rules")
             .cloned()

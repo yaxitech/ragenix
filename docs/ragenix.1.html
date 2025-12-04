@@ -140,6 +140,19 @@ store.</p>
     <p>When rekeying, <code>ragenix</code> does not write any plaintext data to disk; all
   processing happens in-memory.</p>
 </dd>
+<dt>
+<code>-R</code>, <code>--rekey-one</code> <var>PATH</var>
+</dt>
+<dd>  Decrypt specified secrets given in the rules configuration file and encrypt
+  them with the defined public keys. This option is useful to grant a new
+  recipient access to specific secrets.
+
+    <p>If the <code>--identity</code> option is not given, <code>ragenix</code> tries to decrypt <var>PATH</var>
+  with the default SSH private keys. See <code>--identity</code> for details.</p>
+
+    <p>When rekeying, <code>ragenix</code> does not write any plaintext data to disk; all
+  processing happens in-memory.</p>
+</dd>
 </dl>
 
 <h2 id="COMMON-OPTIONS">COMMON OPTIONS</h2>
@@ -268,7 +281,7 @@ ragenix.override { plugins = [ age-plugin-yubikey ]; }
 
   <ol class='man-decor man-foot man foot'>
     <li class='tl'></li>
-    <li class='tc'>January 2022</li>
+    <li class='tc'>January 1980</li>
     <li class='tr'>ragenix(1)</li>
   </ol>
 

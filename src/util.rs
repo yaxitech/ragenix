@@ -1,7 +1,7 @@
 //! Util functions
 
 use std::{
-    fs::File,
+    fs::{self, File},
     io,
     path::{Component, Path, PathBuf},
 };
@@ -47,6 +47,14 @@ pub(crate) fn normalize_path(path: &Path) -> PathBuf {
         }
     }
     ret
+}
+
+/// Make a path relative to the current working directory (rules format)
+pub(crate) fn canonicalize_rule_path<P: AsRef<Path>>(path: P) -> Result<PathBuf> {
+    let path_normalized = normalize_path(path.as_ref());
+    Ok(std::env::current_dir()
+        .and_then(fs::canonicalize)
+        .map(|p| p.join(path_normalized))?)
 }
 
 /// Hash a file using SHA-256

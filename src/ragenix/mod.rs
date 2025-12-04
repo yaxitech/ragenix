@@ -146,6 +146,7 @@ pub(crate) fn parse_rules<P: AsRef<Path>>(rules_path: P) -> Result<Vec<RagenixRu
 pub(crate) fn rekey(
     entries: &[RagenixRule],
     identities: &[String],
+    no_exist_ok: bool,
     mut writer: impl Write,
 ) -> Result<()> {
     let identities = age::get_identities(identities)?;
@@ -153,8 +154,10 @@ pub(crate) fn rekey(
         if entry.path.exists() {
             writeln!(writer, "Rekeying {}", entry.path.display())?;
             age::rekey(&entry.path, &identities, &entry.public_keys)?;
-        } else {
+        } else if no_exist_ok {
             writeln!(writer, "Does not exist, ignored: {}", entry.path.display())?;
+        } else {
+            return Err(eyre!("Does not exist: {}", entry.path.display()));
         }
     }
     Ok(())
