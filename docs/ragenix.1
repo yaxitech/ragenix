@@ -1,10 +1,12 @@
-.\" generated with Ronn-NG/v0.9.1
-.\" http://github.com/apjanke/ronn-ng/tree/0.9.1
-.TH "RAGENIX" "1" "January 2022" ""
+.\" generated with Ronn-NG/v0.10.1
+.\" http://github.com/apjanke/ronn-ng/tree/0.10.1
+.TH "RAGENIX" "1" "February 2026" ""
 .SH "NAME"
 \fBragenix\fR \- age\-encrypted secrets for Nix
 .SH "SYNOPSIS"
-\fBragenix\fR [\fB\-\-rules\fR \fIPATH\fR=\./secrets\.nix] [\fB\-i\fR \fIPATH\fR]\|\.\|\.\|\. (\fB\-e\fR \fIPATH\fR | \fB\-r\fR)
+\fBragenix\fR [\fB\-\-rules\fR \fIPATH\fR=\./secrets\.nix] [\fB\-i\fR \fIPATH\fR]\|\.\|\.\|\. (\fB\-d\fR \fIPATH\fR | \fB\-e\fR \fIPATH\fR | \fB\-r\fR)
+.br
+\fBragenix\fR \fB\-d\fR \fIPATH\fR
 .br
 \fBragenix\fR \fB\-e\fR \fIPATH\fR
 .br
@@ -13,6 +15,13 @@
 .SH "DESCRIPTION"
 \fBragenix\fR encrypts secrets defined in a Nix configuration expression using \fBage(1)\fR\. It is safe to publicly expose the resulting age\-encrypted files, e\.g\., by checking them into version control or copying them to the world\-readable Nix store\.
 .SH "OPTIONS"
+.TP
+\fB\-d\fR, \fB\-\-decrypt\fR \fIPATH\fR
+Decrypt the age\-encrypted file at \fIPATH\fR and output the plaintext to standard output\. This is useful for directly accessing the contents of a secret file without opening an editor\.
+.IP
+If the \fB\-\-identity\fR option is not given, \fBragenix\fR tries to decrypt \fIPATH\fR with the default SSH private keys\. See \fB\-\-identity\fR for details\.
+.IP
+Unlike the \fB\-\-edit\fR option, this does not require the file to match a rule in the rules configuration file\.
 .TP
 \fB\-e\fR, \fB\-\-edit\fR \fIPATH\fR
 Decrypt the file at \fIPATH\fR and open it for editing\. If the \fIPATH\fR does not exist yet, \fBragenix\fR opens an empty file for editing\. In any case, the given \fIPATH\fR has to match a rule as configured in the file given to the \fB\-\-rules\fR option\. After editing, \fBragenix\fR encrypts the updated contents and replaces the original file\.
@@ -89,6 +98,14 @@ id_ed25519  id_ed25519\.pub
 $ ls /var/lib/secrets/
 rules\.nix secret\.txt\.age
 $ ragenix \-\-rules /var/lib/secrets/rules\.nix \-e secret\.txt\.age
+.fi
+.IP "" 0
+.P
+Decrypt a secret file to stdout:
+.IP "" 4
+.nf
+$ ragenix \-\-decrypt secret\.txt\.age
+This is the secret content
 .fi
 .IP "" 0
 .P

@@ -432,3 +432,42 @@ fn fails_for_invalid_recipient() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+#[cfg_attr(not(feature = "recursive-nix"), ignore)]
+fn decrypt_works() -> Result<()> {
+    let (_dir, path) = copy_example_to_tmpdir()?;
+
+    let mut cmd = Command::cargo_bin(crate_name!())?;
+    let assert = cmd
+        .current_dir(&path)
+        .arg("--decrypt")
+        .arg("github-runner.token.age")
+        .arg("--identity")
+        .arg("keys/id_ed25519")
+        .assert();
+
+    assert
+        .success()
+        .stdout(predicate::str::contains("wurzelpfropf!"));
+
+    Ok(())
+}
+
+#[test]
+fn decrypt_missing_file_errors() -> Result<()> {
+    let dir = tempfile::tempdir()?;
+
+    let mut cmd = Command::cargo_bin(crate_name!())?;
+    let assert = cmd
+        .current_dir(dir.path())
+        .arg("--decrypt")
+        .arg("nonexistent.age")
+        .assert();
+
+    assert
+        .failure()
+        .stderr(predicate::str::contains("does not exist"));
+
+    Ok(())
+}

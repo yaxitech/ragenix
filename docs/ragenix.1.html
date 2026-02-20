@@ -79,7 +79,8 @@
 </p>
 <h2 id="SYNOPSIS">SYNOPSIS</h2>
 
-<p><code>ragenix</code> [<code>--rules</code> <var>PATH</var>=./secrets.nix] [<code>-i</code> <var>PATH</var>]... (<code>-e</code> <var>PATH</var> | <code>-r</code>)<br>
+<p><code>ragenix</code> [<code>--rules</code> <var>PATH</var>=./secrets.nix] [<code>-i</code> <var>PATH</var>]... (<code>-d</code> <var>PATH</var> | <code>-e</code> <var>PATH</var> | <code>-r</code>)<br>
+<code>ragenix</code> <code>-d</code> <var>PATH</var><br>
 <code>ragenix</code> <code>-e</code> <var>PATH</var><br>
 <code>ragenix</code> <code>-r</code><br></p>
 
@@ -93,6 +94,19 @@ store.</p>
 <h2 id="OPTIONS">OPTIONS</h2>
 
 <dl>
+<dt>
+<code>-d</code>, <code>--decrypt</code> <var>PATH</var>
+</dt>
+<dd>  Decrypt the age-encrypted file at <var>PATH</var> and output the plaintext to
+  standard output. This is useful for directly accessing the contents of a
+  secret file without opening an editor.
+
+    <p>If the <code>--identity</code> option is not given, <code>ragenix</code> tries to decrypt <var>PATH</var>
+  with the default SSH private keys. See <code>--identity</code> for details.</p>
+
+    <p>Unlike the <code>--edit</code> option, this does not require the file to match a rule
+  in the rules configuration file.</p>
+</dd>
 <dt>
 <code>-e</code>, <code>--edit</code> <var>PATH</var>
 </dt>
@@ -235,6 +249,12 @@ rules.nix secret.txt.age
 $ ragenix --rules /var/lib/secrets/rules.nix -e secret.txt.age
 </code></pre>
 
+<p>Decrypt a secret file to stdout:</p>
+
+<pre><code>$ ragenix --decrypt secret.txt.age
+This is the secret content
+</code></pre>
+
 <p>Rekey all secrets given in ./secrets.nix with the age identity
 ~/.age/ragenix.key:</p>
 
@@ -268,7 +288,7 @@ ragenix.override { plugins = [ age-plugin-yubikey ]; }
 
   <ol class='man-decor man-foot man foot'>
     <li class='tl'></li>
-    <li class='tc'>January 2022</li>
+    <li class='tc'>February 2026</li>
     <li class='tr'>ragenix(1)</li>
   </ol>
 

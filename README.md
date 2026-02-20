@@ -32,9 +32,10 @@ For the full documentation, read the [ragenix(1) man page](https://htmlpreview.g
 
 ```
 USAGE:
-    ragenix [OPTIONS] <--edit <FILE>|--rekey|--schema>
+    ragenix [OPTIONS] <--decrypt <FILE>|--edit <FILE>|--rekey|--schema>
 
 OPTIONS:
+    -d, --decrypt <FILE>               decrypts the age-encrypted FILE to stdout
     -e, --edit <FILE>                  edits the age-encrypted FILE using $EDITOR
         --editor <EDITOR>              editor to use when editing FILE [env: EDITOR=vim]
     -h, --help                         Print help information

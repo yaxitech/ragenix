@@ -3,7 +3,8 @@ ragenix(1) -- age-encrypted secrets for Nix
 
 ## SYNOPSIS
 
-`ragenix` [`--rules` <PATH>=./secrets.nix] [`-i` <PATH>]... (`-e` <PATH> | `-r`)<br>
+`ragenix` [`--rules` <PATH>=./secrets.nix] [`-i` <PATH>]... (`-d` <PATH> | `-e` <PATH> | `-r`)<br>
+`ragenix` `-d` <PATH><br>
 `ragenix` `-e` <PATH><br>
 `ragenix` `-r`<br>
 
@@ -15,6 +16,17 @@ by checking them into version control or copying them to the world-readable Nix
 store.
 
 ## OPTIONS
+
+* `-d`, `--decrypt` <PATH>:
+    Decrypt the age-encrypted file at <PATH> and output the plaintext to
+    standard output. This is useful for directly accessing the contents of a
+    secret file without opening an editor.
+
+    If the `--identity` option is not given, `ragenix` tries to decrypt <PATH>
+    with the default SSH private keys. See `--identity` for details.
+
+    Unlike the `--edit` option, this does not require the file to match a rule
+    in the rules configuration file.
 
 * `-e`, `--edit` <PATH>:
     Decrypt the file at <PATH> and open it for editing. If the <PATH> does not
@@ -134,6 +146,11 @@ file different from ./secrets.nix:
     $ ls /var/lib/secrets/
     rules.nix secret.txt.age
     $ ragenix --rules /var/lib/secrets/rules.nix -e secret.txt.age
+
+Decrypt a secret file to stdout:
+
+    $ ragenix --decrypt secret.txt.age
+    This is the secret content
 
 Rekey all secrets given in ./secrets.nix with the age identity
 ~/.age/ragenix.key:
