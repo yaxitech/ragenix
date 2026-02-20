@@ -153,6 +153,22 @@ pub(crate) fn decrypt<P: AsRef<Path>>(
         })
 }
 
+/// Decrypt an age-encrypted file and write the plaintext to a writer.
+pub(crate) fn decrypt_to_writer<P: AsRef<Path>>(
+    input_file: P,
+    identities: &[Box<dyn age::Identity>],
+    mut writer: impl io::Write,
+) -> Result<()> {
+    let decryptor = get_age_decryptor(input_file)?;
+    decryptor
+        .decrypt(identities.iter().map(|i| i.as_ref() as &dyn age::Identity))
+        .map_err(Into::into)
+        .and_then(|mut plaintext_reader| {
+            io::copy(&mut plaintext_reader, &mut writer)?;
+            Ok(())
+        })
+}
+
 /// Encrypt a plaintext file to an age-encrypted file.
 ///
 /// The output file is created with a mode of `0o644`.

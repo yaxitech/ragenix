@@ -160,6 +160,18 @@ pub(crate) fn rekey(
     Ok(())
 }
 
+/// Decrypt an age-encrypted file and write the plaintext to a writer.
+///
+/// This does not require a rules file — it decrypts the given path directly.
+pub(crate) fn decrypt_to_writer(
+    path: &Path,
+    identity_paths: &[String],
+    writer: impl Write,
+) -> Result<()> {
+    let identities = age::get_identities(identity_paths)?;
+    age::decrypt_to_writer(path, &identities, writer)
+}
+
 /// Edit/create an age-encrypted file
 ///
 /// If the file doesn't exist yet, a new file is created and opened in `editor`.
