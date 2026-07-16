@@ -79,9 +79,9 @@
 </p>
 <h2 id="SYNOPSIS">SYNOPSIS</h2>
 
-<p><code>ragenix</code> [<code>--rules</code> <var>PATH</var>=./secrets.nix] [<code>-i</code> <var>PATH</var>]... (<code>-e</code> <var>PATH</var> | <code>-r</code>)<br>
+<p><code>ragenix</code> [<code>--rules</code> <var>PATH</var>=./secrets.nix] [<code>-i</code> <var>PATH</var>]... (<code>-e</code> <var>PATH</var> | <code>-r</code> [<code>-l</code>])<br>
 <code>ragenix</code> <code>-e</code> <var>PATH</var><br>
-<code>ragenix</code> <code>-r</code><br></p>
+<code>ragenix</code> <code>-r</code> [<code>-l</code>]<br></p>
 
 <h2 id="DESCRIPTION">DESCRIPTION</h2>
 
@@ -139,6 +139,21 @@ store.</p>
 
     <p>When rekeying, <code>ragenix</code> does not write any plaintext data to disk; all
   processing happens in-memory.</p>
+</dd>
+<dt>
+<code>-l</code>, <code>--lazy</code>
+</dt>
+<dd>  Only valid in combination with <code>--rekey</code>. Skip secrets which are already
+  encrypted to the recipients given in the rules configuration file,
+  leaving the files untouched.
+
+    <p><code>ragenix</code> decides based on the age header of a secret file: SSH
+  recipients are compared by their fingerprint tags while X25519
+  recipients are only compared by their number as age files do not
+  identify X25519 recipients by design. Consequently, replacing an X25519
+  recipient with another one does not cause a rekey of a secret. The same
+  holds for removing a plugin recipient. After such changes, rekey without
+  the <code>--lazy</code> option.</p>
 </dd>
 </dl>
 
@@ -268,7 +283,7 @@ ragenix.override { plugins = [ age-plugin-yubikey ]; }
 
   <ol class='man-decor man-foot man foot'>
     <li class='tl'></li>
-    <li class='tc'>January 2022</li>
+    <li class='tc'>January 1980</li>
     <li class='tr'>ragenix(1)</li>
   </ol>
 

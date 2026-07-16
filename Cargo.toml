@@ -12,6 +12,7 @@ recursive-nix = []
 
 [dependencies]
 age = { version = "^0.10", default-features = false, features = [ "cli-common", "ssh", "armor", "plugin" ] }
+base64 = "^0.22"
 clap = { version = "^4.0", features = [ "cargo", "env" ] }
 color-eyre = { version = "^0.6", default-features = false, features = [ "track-caller" ] }
 home = "^0.5"

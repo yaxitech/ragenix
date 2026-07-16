@@ -3,7 +3,7 @@
 use std::{
     convert::Into,
     fs,
-    io::{self, BufReader},
+    io::{self, BufRead, BufReader},
     path::Path,
 };
 
@@ -15,6 +15,9 @@ use age::{
     },
     decryptor::RecipientsDecryptor,
 };
+
+use base64::prelude::{Engine, BASE64_STANDARD, BASE64_STANDARD_NO_PAD};
+use sha2::{Digest, Sha256};
 
 use color_eyre::{
     eyre::{eyre, Result, WrapErr},
@@ -198,6 +201,122 @@ pub(crate) fn encrypt<P: AsRef<Path>>(
     Ok(())
 }
 
+/// The recipients of an age file as far as its header reveals them.
+///
+/// SSH recipients are identified by the key fingerprint tag age embeds in
+/// their stanzas. X25519 recipients are unlinkable by design, so only their
+/// number is known.
+#[derive(Debug, PartialEq, Eq)]
+struct RecipientFingerprint {
+    ssh_tags: Vec<String>,
+    x25519_count: usize,
+}
+
+/// Compute the tag age uses in stanzas of SSH recipients: the unpadded
+/// base64 encoding of the first four bytes of the SHA-256 digest of the
+/// SSH public key blob.
+fn ssh_recipient_tag(pubkey: &str) -> Result<String> {
+    let blob_b64 = pubkey
+        .split_whitespace()
+        .nth(1)
+        .ok_or_else(|| eyre!("Invalid SSH public key: {}", pubkey))?;
+    let blob = BASE64_STANDARD.decode(blob_b64)?;
+    let digest = Sha256::digest(&blob);
+    Ok(BASE64_STANDARD_NO_PAD.encode(&digest[..4]))
+}
+
+/// Compute the [`RecipientFingerprint`] an age file would have if it were
+/// encrypted to exactly the given public keys.
+///
+/// Returns `Ok(None)` if any key is a plugin recipient as those cannot be
+/// identified in an age header.
+fn fingerprint_public_keys(public_keys: &[String]) -> Result<Option<RecipientFingerprint>> {
+    let mut ssh_tags: Vec<String> = vec![];
+    let mut x25519_count: usize = 0;
+
+    for pubkey in public_keys {
+        if pubkey.parse::<age::x25519::Recipient>().is_ok() {
+            x25519_count += 1;
+        } else if pubkey.parse::<age::ssh::Recipient>().is_ok() {
+            ssh_tags.push(ssh_recipient_tag(pubkey)?);
+        } else {
+            return Ok(None);
+        }
+    }
+
+    ssh_tags.sort_unstable();
+    Ok(Some(RecipientFingerprint {
+        ssh_tags,
+        x25519_count,
+    }))
+}
+
+/// Read the [`RecipientFingerprint`] from the header of an age-encrypted file.
+///
+/// Returns `Ok(None)` if the file is not a valid age file or contains a
+/// stanza which cannot be attributed to an SSH or X25519 recipient.
+fn fingerprint_encrypted_file<P: AsRef<Path>>(path: P) -> Result<Option<RecipientFingerprint>> {
+    let s = path.as_ref().to_str().map(std::string::ToString::to_string);
+    let input_reader = InputReader::new(s)?;
+    let mut reader = BufReader::new(ArmoredReader::new(input_reader));
+
+    let mut line = String::new();
+    reader.read_line(&mut line)?;
+    if line.trim_end() != "age-encryption.org/v1" {
+        return Ok(None);
+    }
+
+    let mut ssh_tags: Vec<String> = vec![];
+    let mut x25519_count: usize = 0;
+
+    loop {
+        line.clear();
+        if reader.read_line(&mut line)? == 0 {
+            // Header ended without a MAC line; not a valid age file
+            return Ok(None);
+        }
+        if line.starts_with("---") {
+            break;
+        }
+        if let Some(stanza) = line.strip_prefix("-> ") {
+            let mut args = stanza.split_whitespace();
+            match (args.next(), args.next()) {
+                (Some("X25519"), Some(_)) => x25519_count += 1,
+                (Some("ssh-ed25519" | "ssh-rsa"), Some(tag)) => ssh_tags.push(tag.to_string()),
+                (Some("scrypt"), _) => return Ok(None),
+                // Any other stanza is grease or belongs to a plugin recipient;
+                // neither identifies a recipient we could compare to the rules
+                _ => (),
+            }
+        }
+        // All other lines are stanza body lines which don't identify recipients
+    }
+
+    ssh_tags.sort_unstable();
+    Ok(Some(RecipientFingerprint {
+        ssh_tags,
+        x25519_count,
+    }))
+}
+
+/// Check whether a file is already encrypted to exactly the given public
+/// keys, as far as its age header reveals.
+///
+/// SSH recipients are compared by their fingerprint tags. As age hides the
+/// identity of X25519 recipients, they are only compared by count; replacing
+/// an X25519 recipient with another one goes unnoticed. Rules with plugin
+/// recipients never match, and plugin stanzas in the file are ignored as
+/// they cannot be told apart from grease.
+pub(crate) fn encrypted_to_recipients<P: AsRef<Path>>(
+    path: P,
+    public_keys: &[String],
+) -> Result<bool> {
+    match fingerprint_public_keys(public_keys)? {
+        Some(expected) => Ok(fingerprint_encrypted_file(path)? == Some(expected)),
+        None => Ok(false),
+    }
+}
+
 /// Re-encrypt a file in memory using the given public keys.
 ///
 /// Decrypts the file and stream-encrypts the contents into a temporary
@@ -245,4 +364,79 @@ pub(crate) fn rekey<P: AsRef<Path>>(
 
             Ok(())
         })
+}
+
+#[cfg(test)]
+mod test_encrypted_to_recipients {
+    use super::*;
+
+    const X25519: &str = "age1wl3fqfvyml0c5eaj00j0frad4vhspgx9t8sngq4342j7rzjw4pqs80euxk";
+    const SSH_ED25519: &str =
+        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILoPdkEfhcsmW6Lg86GMrEJZnYfFBb7fL9G/IXK7pDQd";
+    const SSH_RSA: &str = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDHd3yBYhZbBkMqycy/SOgx9d79TV5Q76czfkmKUKVzywUJbJCwZ4wMA+ff7QzBufZRoAWpGeQb+rssLQEOwR+VX30Fw7K92W4kK6BCF5phP6AUCo07e3vjGqKvgJ4+8LYvcCB17bYf8pJhb4GoOGLrlJNKbGZOhfYE0eGFu/fWsVybQasC2naieKfqHOwS9kNK0N1gSnWh0qu3Du9vBAbQBEE13mPGe4zEdIzTogM068xgKhfJUWqu1xCyVBVJNdz9Xw0NLaWQJon8YXDe62ifxLj3LgndwKm91cN9mmL0klcGB5O8K2mPE0ZGFMDuxdcllUchQgYXdNxEWB4EvpkvpQbiO+fjgMpHeEEiNPd/v06amSBqK+QlIGEkPAElELphPLiTJmHVqxc5NaffVc7F+zM+c3+aWB5Fqgk1jcnqm8HmlLEvPPT1S00c80SkY1V3lUUOirFlciP/pEivJejA5Yj2i1NEEELnrCdBw/xQ4jfesIxcqmBhxk5dWeBbfGs=";
+
+    fn example_file() -> &'static str {
+        concat!(env!("CARGO_MANIFEST_DIR"), "/example/root.passwd.age")
+    }
+
+    #[test]
+    fn computes_tags_age_writes_to_stanzas() -> Result<()> {
+        // Expected values taken from the header of `example/root.passwd.age`
+        assert_eq!(ssh_recipient_tag(SSH_ED25519)?, "a6H7Ng");
+        assert_eq!(ssh_recipient_tag(SSH_RSA)?, "1NDNnA");
+        Ok(())
+    }
+
+    #[test]
+    fn matches_unchanged_recipients() -> Result<()> {
+        let public_keys: Vec<String> = [X25519, SSH_ED25519, SSH_RSA].map(String::from).to_vec();
+        assert!(encrypted_to_recipients(example_file(), &public_keys)?);
+        Ok(())
+    }
+
+    #[test]
+    fn detects_changed_recipients() -> Result<()> {
+        // Removed SSH recipient
+        let public_keys: Vec<String> = [X25519, SSH_ED25519].map(String::from).to_vec();
+        assert!(!encrypted_to_recipients(example_file(), &public_keys)?);
+
+        // Removed X25519 recipient
+        let public_keys: Vec<String> = [SSH_ED25519, SSH_RSA].map(String::from).to_vec();
+        assert!(!encrypted_to_recipients(example_file(), &public_keys)?);
+
+        // Additional X25519 recipient
+        let public_keys: Vec<String> = [
+            X25519,
+            SSH_ED25519,
+            SSH_RSA,
+            "age1fjc9tyguvxfqh2ey2qqfc066g3gee7hlnhqn2g7yn4f6smymmsnq6xdn2t",
+        ]
+        .map(String::from)
+        .to_vec();
+        assert!(!encrypted_to_recipients(example_file(), &public_keys)?);
+
+        Ok(())
+    }
+
+    #[test]
+    fn never_matches_plugin_recipients() -> Result<()> {
+        let public_keys: Vec<String> = [
+            X25519,
+            SSH_ED25519,
+            SSH_RSA,
+            "age1yubikey1qwt50d05nh5vutpdzmlg5wn80xq5negm4uj9y5q0jvzgxrq2yn2vsy5g5gd",
+        ]
+        .map(String::from)
+        .to_vec();
+        assert!(!encrypted_to_recipients(example_file(), &public_keys)?);
+        Ok(())
+    }
+
+    #[test]
+    fn never_matches_non_age_files() -> Result<()> {
+        let rules_file = concat!(env!("CARGO_MANIFEST_DIR"), "/example/secrets.nix");
+        let public_keys: Vec<String> = [X25519].map(String::from).to_vec();
+        assert!(!encrypted_to_recipients(rules_file, &public_keys)?);
+        Ok(())
+    }
 }
