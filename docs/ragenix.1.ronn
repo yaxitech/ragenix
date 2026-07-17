@@ -62,13 +62,15 @@ store.
     encrypted to the recipients given in the rules configuration file,
     leaving the files untouched.
 
-    `ragenix` decides based on the age header of a secret file: SSH
-    recipients are compared by their fingerprint tags while X25519
-    recipients are only compared by their number as age files do not
-    identify X25519 recipients by design. Consequently, replacing an X25519
-    recipient with another one does not cause a rekey of a secret. The same
-    holds for removing a plugin recipient. After such changes, rekey without
-    the `--lazy` option.
+    `ragenix` decides based on the age header of a secret file: SSH and
+    YubiKey (age-plugin-yubikey) recipients are compared by their
+    fingerprint tags while X25519 recipients are only compared by their
+    number as age files do not identify X25519 recipients by design.
+    Consequently, replacing an X25519 recipient with another one or removing
+    a recipient of any other age plugin does not cause a rekey of a secret.
+    After such changes, rekey without the `--lazy` option. Secrets whose
+    rules contain recipients of age plugins other than age-plugin-yubikey
+    are always rekeyed.
 
 ## COMMON OPTIONS
 

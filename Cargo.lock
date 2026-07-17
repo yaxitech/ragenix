@@ -1707,6 +1707,7 @@ dependencies = [
  "age",
  "assert_cmd",
  "base64 0.22.1",
+ "bech32",
  "clap",
  "clap_complete",
  "color-eyre",
