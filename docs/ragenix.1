@@ -1,14 +1,14 @@
-.\" generated with Ronn-NG/v0.9.1
-.\" http://github.com/apjanke/ronn-ng/tree/0.9.1
-.TH "RAGENIX" "1" "January 2022" ""
+.\" generated with Ronn-NG/v0.10.1
+.\" http://github.com/apjanke/ronn-ng/tree/0.10.1
+.TH "RAGENIX" "1" "January 1980" ""
 .SH "NAME"
 \fBragenix\fR \- age\-encrypted secrets for Nix
 .SH "SYNOPSIS"
-\fBragenix\fR [\fB\-\-rules\fR \fIPATH\fR=\./secrets\.nix] [\fB\-i\fR \fIPATH\fR]\|\.\|\.\|\. (\fB\-e\fR \fIPATH\fR | \fB\-r\fR)
+\fBragenix\fR [\fB\-\-rules\fR \fIPATH\fR=\./secrets\.nix] [\fB\-i\fR \fIPATH\fR]\|\.\|\.\|\. (\fB\-e\fR \fIPATH\fR | \fB\-r\fR [\fB\-l\fR])
 .br
 \fBragenix\fR \fB\-e\fR \fIPATH\fR
 .br
-\fBragenix\fR \fB\-r\fR
+\fBragenix\fR \fB\-r\fR [\fB\-l\fR]
 .br
 .SH "DESCRIPTION"
 \fBragenix\fR encrypts secrets defined in a Nix configuration expression using \fBage(1)\fR\. It is safe to publicly expose the resulting age\-encrypted files, e\.g\., by checking them into version control or copying them to the world\-readable Nix store\.
@@ -36,6 +36,11 @@ Decrypt all secrets given in the rules configuration file and encrypt them with 
 If the \fB\-\-identity\fR option is not given, \fBragenix\fR tries to decrypt \fIPATH\fR with the default SSH private keys\. See \fB\-\-identity\fR for details\.
 .IP
 When rekeying, \fBragenix\fR does not write any plaintext data to disk; all processing happens in\-memory\.
+.TP
+\fB\-l\fR, \fB\-\-lazy\fR
+Only valid in combination with \fB\-\-rekey\fR\. Skip secrets which are already encrypted to the recipients given in the rules configuration file, leaving the files untouched\.
+.IP
+\fBragenix\fR decides based on the age header of a secret file: SSH and YubiKey (age\-plugin\-yubikey) recipients are compared by their fingerprint tags while X25519 recipients are only compared by their number as age files do not identify X25519 recipients by design\. Consequently, replacing an X25519 recipient with another one or removing a recipient of any other age plugin does not cause a rekey of a secret\. After such changes, rekey without the \fB\-\-lazy\fR option\. Secrets whose rules contain recipients of age plugins other than age\-plugin\-yubikey are always rekeyed\.
 .SH "COMMON OPTIONS"
 .TP
 \fB\-\-rules\fR \fIPATH\fR

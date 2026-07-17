@@ -143,14 +143,26 @@ pub(crate) fn parse_rules<P: AsRef<Path>>(rules_path: P) -> Result<Vec<RagenixRu
 }
 
 /// Rekey all entries with the specified public keys
+///
+/// If `lazy` is set, entries which are already encrypted to their configured
+/// recipients are skipped.
 pub(crate) fn rekey(
     entries: &[RagenixRule],
     identities: &[String],
+    lazy: bool,
     mut writer: impl Write,
 ) -> Result<()> {
     let identities = age::get_identities(identities)?;
     for entry in entries {
         if entry.path.exists() {
+            if lazy && age::encrypted_to_recipients(&entry.path, &entry.public_keys)? {
+                writeln!(
+                    writer,
+                    "Recipients unchanged, skipping: {}",
+                    entry.path.display()
+                )?;
+                continue;
+            }
             writeln!(writer, "Rekeying {}", entry.path.display())?;
             age::rekey(&entry.path, &identities, &entry.public_keys)?;
         } else {

@@ -39,6 +39,8 @@ OPTIONS:
         --editor <EDITOR>              editor to use when editing FILE [env: EDITOR=vim]
     -h, --help                         Print help information
     -i, --identity <PRIVATE_KEY>...    private key to use when decrypting
+    -l, --lazy                         when rekeying, skip secrets which are already encrypted
+                                       to the recipients
     -r, --rekey                        re-encrypts all secrets with specified recipients
         --rules <RULES>                path to Nix file specifying recipient public keys [env:
                                        RULES=] [default: ./secrets.nix]

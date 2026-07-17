@@ -3,9 +3,9 @@ ragenix(1) -- age-encrypted secrets for Nix
 
 ## SYNOPSIS
 
-`ragenix` [`--rules` <PATH>=./secrets.nix] [`-i` <PATH>]... (`-e` <PATH> | `-r`)<br>
+`ragenix` [`--rules` <PATH>=./secrets.nix] [`-i` <PATH>]... (`-e` <PATH> | `-r` [`-l`])<br>
 `ragenix` `-e` <PATH><br>
-`ragenix` `-r`<br>
+`ragenix` `-r` [`-l`]<br>
 
 ## DESCRIPTION
 
@@ -56,6 +56,21 @@ store.
 
     When rekeying, `ragenix` does not write any plaintext data to disk; all
     processing happens in-memory.
+
+* `-l`, `--lazy`:
+    Only valid in combination with `--rekey`. Skip secrets which are already
+    encrypted to the recipients given in the rules configuration file,
+    leaving the files untouched.
+
+    `ragenix` decides based on the age header of a secret file: SSH and
+    YubiKey (age-plugin-yubikey) recipients are compared by their
+    fingerprint tags while X25519 recipients are only compared by their
+    number as age files do not identify X25519 recipients by design.
+    Consequently, replacing an X25519 recipient with another one or removing
+    a recipient of any other age plugin does not cause a rekey of a secret.
+    After such changes, rekey without the `--lazy` option. Secrets whose
+    rules contain recipients of age plugins other than age-plugin-yubikey
+    are always rekeyed.
 
 ## COMMON OPTIONS
 

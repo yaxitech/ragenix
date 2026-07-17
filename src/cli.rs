@@ -7,11 +7,13 @@ use clap::{
 };
 
 #[allow(dead_code)] // False positive
+#[allow(clippy::struct_excessive_bools)] // Mirrors the independent CLI flags
 #[derive(Debug, Clone)]
 pub(crate) struct Opts {
     pub edit: Option<String>,
     pub editor: Option<String>,
     pub identities: Option<Vec<String>>,
+    pub lazy: bool,
     pub rekey: bool,
     pub rules: String,
     pub schema: bool,
@@ -38,6 +40,14 @@ fn build() -> Command {
                 .help("re-encrypts all secrets with specified recipients")
                 .long("rekey")
                 .short('r')
+                .action(ArgAction::SetTrue),
+        )
+        .arg(
+            Arg::new("lazy")
+                .help("when rekeying, skip secrets which are already encrypted to the recipients")
+                .long("lazy")
+                .short('l')
+                .requires("rekey")
                 .action(ArgAction::SetTrue),
         )
         .arg(
@@ -107,6 +117,7 @@ where
         identities: matches
             .get_many::<String>("identity")
             .map(|vals| vals.cloned().collect::<Vec<_>>()),
+        lazy: matches.get_flag("lazy"),
         rekey: matches.get_flag("rekey"),
         rules: matches
             .get_one::<String>("rules")

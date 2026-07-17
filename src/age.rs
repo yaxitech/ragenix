@@ -3,7 +3,7 @@
 use std::{
     convert::Into,
     fs,
-    io::{self, BufReader},
+    io::{self, BufRead, BufReader},
     path::Path,
 };
 
@@ -15,6 +15,10 @@ use age::{
     },
     decryptor::RecipientsDecryptor,
 };
+
+use base64::prelude::{Engine, BASE64_STANDARD, BASE64_STANDARD_NO_PAD};
+use bech32::FromBase32;
+use sha2::{Digest, Sha256};
 
 use color_eyre::{
     eyre::{eyre, Result, WrapErr},
@@ -198,6 +202,136 @@ pub(crate) fn encrypt<P: AsRef<Path>>(
     Ok(())
 }
 
+/// The recipients of an age file as far as its header reveals them.
+///
+/// SSH and `YubiKey` recipients are identified by the key fingerprint tag their
+/// stanzas embed, qualified by the stanza type (e.g. `ssh-ed25519 a6H7Ng`).
+/// X25519 recipients are unlinkable by design, so only their number is known.
+#[derive(Debug, PartialEq, Eq)]
+struct RecipientFingerprint {
+    tags: Vec<String>,
+    x25519_count: usize,
+}
+
+/// Encode a recipient tag the way age writes it to a stanza: the unpadded
+/// base64 encoding of the first four bytes of the SHA-256 digest of the
+/// recipient's key material.
+fn stanza_tag(key_material: &[u8]) -> String {
+    let digest = Sha256::digest(key_material);
+    BASE64_STANDARD_NO_PAD.encode(&digest[..4])
+}
+
+/// Compute the stanza type and tag of an SSH recipient. The tag is derived
+/// from the SSH public key blob.
+fn ssh_recipient_tag(pubkey: &str) -> Result<String> {
+    let mut fields = pubkey.split_whitespace();
+    let (Some(key_type), Some(blob_b64)) = (fields.next(), fields.next()) else {
+        return Err(eyre!("Invalid SSH public key: {}", pubkey));
+    };
+    let blob = BASE64_STANDARD.decode(blob_b64)?;
+    Ok(format!("{} {}", key_type, stanza_tag(&blob)))
+}
+
+/// Compute the stanza type and tag of an `age-plugin-yubikey` recipient. The
+/// tag is derived from the bech32-encoded compressed public key.
+fn yubikey_recipient_tag(pubkey: &str) -> Result<String> {
+    let (_hrp, data, _variant) = bech32::decode(pubkey)?;
+    let compressed_point = Vec::<u8>::from_base32(&data)?;
+    Ok(format!("piv-p256 {}", stanza_tag(&compressed_point)))
+}
+
+/// Compute the [`RecipientFingerprint`] an age file would have if it were
+/// encrypted to exactly the given public keys.
+///
+/// Returns `Ok(None)` if any key is a plugin recipient other than a `YubiKey`
+/// as those cannot be identified in an age header.
+fn fingerprint_public_keys(public_keys: &[String]) -> Result<Option<RecipientFingerprint>> {
+    let mut tags: Vec<String> = vec![];
+    let mut x25519_count: usize = 0;
+
+    for pubkey in public_keys {
+        if pubkey.parse::<age::x25519::Recipient>().is_ok() {
+            x25519_count += 1;
+        } else if pubkey.parse::<age::ssh::Recipient>().is_ok() {
+            tags.push(ssh_recipient_tag(pubkey)?);
+        } else if matches!(pubkey.parse::<age::plugin::Recipient>(), Ok(r) if r.plugin() == "yubikey")
+        {
+            tags.push(yubikey_recipient_tag(pubkey)?);
+        } else {
+            return Ok(None);
+        }
+    }
+
+    tags.sort_unstable();
+    Ok(Some(RecipientFingerprint { tags, x25519_count }))
+}
+
+/// Read the [`RecipientFingerprint`] from the header of an age-encrypted file.
+///
+/// Returns `Ok(None)` if the file is not a valid age file or contains a
+/// stanza which cannot be attributed to an SSH or X25519 recipient.
+fn fingerprint_encrypted_file<P: AsRef<Path>>(path: P) -> Result<Option<RecipientFingerprint>> {
+    let s = path.as_ref().to_str().map(std::string::ToString::to_string);
+    let input_reader = InputReader::new(s)?;
+    let mut reader = BufReader::new(ArmoredReader::new(input_reader));
+
+    let mut line = String::new();
+    reader.read_line(&mut line)?;
+    if line.trim_end() != "age-encryption.org/v1" {
+        return Ok(None);
+    }
+
+    let mut tags: Vec<String> = vec![];
+    let mut x25519_count: usize = 0;
+
+    loop {
+        line.clear();
+        if reader.read_line(&mut line)? == 0 {
+            // Header ended without a MAC line; not a valid age file
+            return Ok(None);
+        }
+        if line.starts_with("---") {
+            break;
+        }
+        if let Some(stanza) = line.strip_prefix("-> ") {
+            let mut args = stanza.split_whitespace();
+            match (args.next(), args.next()) {
+                (Some("X25519"), Some(_)) => x25519_count += 1,
+                (Some(stanza_type @ ("ssh-ed25519" | "ssh-rsa" | "piv-p256")), Some(tag)) => {
+                    tags.push(format!("{stanza_type} {tag}"));
+                }
+                (Some("scrypt"), _) => return Ok(None),
+                // Any other stanza is grease or belongs to an unsupported
+                // plugin; neither identifies a recipient we could compare to
+                // the rules
+                _ => (),
+            }
+        }
+        // All other lines are stanza body lines which don't identify recipients
+    }
+
+    tags.sort_unstable();
+    Ok(Some(RecipientFingerprint { tags, x25519_count }))
+}
+
+/// Check whether a file is already encrypted to exactly the given public
+/// keys, as far as its age header reveals.
+///
+/// SSH and `YubiKey` (`age-plugin-yubikey`) recipients are compared by their
+/// fingerprint tags. As age hides the identity of X25519 recipients, they are
+/// only compared by count; replacing an X25519 recipient with another one
+/// goes unnoticed. Rules with other plugin recipients never match, and their
+/// stanzas in the file are ignored as they cannot be told apart from grease.
+pub(crate) fn encrypted_to_recipients<P: AsRef<Path>>(
+    path: P,
+    public_keys: &[String],
+) -> Result<bool> {
+    match fingerprint_public_keys(public_keys)? {
+        Some(expected) => Ok(fingerprint_encrypted_file(path)? == Some(expected)),
+        None => Ok(false),
+    }
+}
+
 /// Re-encrypt a file in memory using the given public keys.
 ///
 /// Decrypts the file and stream-encrypts the contents into a temporary
@@ -245,4 +379,133 @@ pub(crate) fn rekey<P: AsRef<Path>>(
 
             Ok(())
         })
+}
+
+#[cfg(test)]
+mod test_encrypted_to_recipients {
+    use super::*;
+
+    const X25519: &str = "age1wl3fqfvyml0c5eaj00j0frad4vhspgx9t8sngq4342j7rzjw4pqs80euxk";
+    const SSH_ED25519: &str =
+        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILoPdkEfhcsmW6Lg86GMrEJZnYfFBb7fL9G/IXK7pDQd";
+    const SSH_RSA: &str = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDHd3yBYhZbBkMqycy/SOgx9d79TV5Q76czfkmKUKVzywUJbJCwZ4wMA+ff7QzBufZRoAWpGeQb+rssLQEOwR+VX30Fw7K92W4kK6BCF5phP6AUCo07e3vjGqKvgJ4+8LYvcCB17bYf8pJhb4GoOGLrlJNKbGZOhfYE0eGFu/fWsVybQasC2naieKfqHOwS9kNK0N1gSnWh0qu3Du9vBAbQBEE13mPGe4zEdIzTogM068xgKhfJUWqu1xCyVBVJNdz9Xw0NLaWQJon8YXDe62ifxLj3LgndwKm91cN9mmL0klcGB5O8K2mPE0ZGFMDuxdcllUchQgYXdNxEWB4EvpkvpQbiO+fjgMpHeEEiNPd/v06amSBqK+QlIGEkPAElELphPLiTJmHVqxc5NaffVc7F+zM+c3+aWB5Fqgk1jcnqm8HmlLEvPPT1S00c80SkY1V3lUUOirFlciP/pEivJejA5Yj2i1NEEELnrCdBw/xQ4jfesIxcqmBhxk5dWeBbfGs=";
+
+    // Bech32 encoding of the compressed public key of a P-256 keypair
+    const YUBIKEY: &str = "age1yubikey1qvqx4uc6pztta4l9w3f9a60787nw9nf8wc3m03a9c3ercw94xzpr70zgfxn";
+    // Same public key encoded for a made-up, unsupported plugin
+    const FAKE_PLUGIN: &str = "age1tpm1qvqx4uc6pztta4l9w3f9a60787nw9nf8wc3m03a9c3ercw94xzpr77zxyha";
+
+    // Created with `rage -a -r age1yubikey1qvqx4... <<< "test secret"` and a
+    // real `age-plugin-yubikey` binary
+    const YUBIKEY_ENCRYPTED_FILE: &str = "-----BEGIN AGE ENCRYPTED FILE-----
+YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IHBpdi1wMjU2IEswcWxMZyBBZ1ZTSmJk
+RTJYUVpaSWRVUFMyL3lqWWZ2YjFwZWJYN0YwMlYzWFZlOW1SYwp6WXdRY3FxZEJF
+a1JwbXdqdW1uSDNIVUx1eVIzV1dBUWt2ekNNOFJqYXRNCi0+IGs2IlFrLWdyZWFz
+ZQpTVEVaZ281YzRoZkUKLS0tIDNBYWVEaHpsazR2RGMwYnVHUTVhNXJQRmx0L2h5
+cUVxcVFIRnAwMGhYUFEKZLDq5IV2hqf03nsS4/rpO/g6TIS57j8CwYrjf0jRnoZC
+8UXf1YdrK8zPrdQ=
+-----END AGE ENCRYPTED FILE-----
+";
+
+    fn example_file() -> &'static str {
+        concat!(env!("CARGO_MANIFEST_DIR"), "/example/root.passwd.age")
+    }
+
+    fn yubikey_encrypted_file() -> Result<NamedTempFile> {
+        let file = NamedTempFile::new()?;
+        fs::write(&file, YUBIKEY_ENCRYPTED_FILE)?;
+        Ok(file)
+    }
+
+    #[test]
+    fn computes_tags_age_writes_to_stanzas() -> Result<()> {
+        // Expected values taken from the header of `example/root.passwd.age`
+        assert_eq!(ssh_recipient_tag(SSH_ED25519)?, "ssh-ed25519 a6H7Ng");
+        assert_eq!(ssh_recipient_tag(SSH_RSA)?, "ssh-rsa 1NDNnA");
+        Ok(())
+    }
+
+    #[test]
+    fn matches_unchanged_recipients() -> Result<()> {
+        let public_keys: Vec<String> = [X25519, SSH_ED25519, SSH_RSA].map(String::from).to_vec();
+        assert!(encrypted_to_recipients(example_file(), &public_keys)?);
+        Ok(())
+    }
+
+    #[test]
+    fn detects_changed_recipients() -> Result<()> {
+        // Removed SSH recipient
+        let public_keys: Vec<String> = [X25519, SSH_ED25519].map(String::from).to_vec();
+        assert!(!encrypted_to_recipients(example_file(), &public_keys)?);
+
+        // Removed X25519 recipient
+        let public_keys: Vec<String> = [SSH_ED25519, SSH_RSA].map(String::from).to_vec();
+        assert!(!encrypted_to_recipients(example_file(), &public_keys)?);
+
+        // Additional X25519 recipient
+        let public_keys: Vec<String> = [
+            X25519,
+            SSH_ED25519,
+            SSH_RSA,
+            "age1fjc9tyguvxfqh2ey2qqfc066g3gee7hlnhqn2g7yn4f6smymmsnq6xdn2t",
+        ]
+        .map(String::from)
+        .to_vec();
+        assert!(!encrypted_to_recipients(example_file(), &public_keys)?);
+
+        Ok(())
+    }
+
+    #[test]
+    fn computes_tag_age_plugin_yubikey_writes_to_stanzas() -> Result<()> {
+        // Expected value taken from the header of [`YUBIKEY_ENCRYPTED_FILE`]
+        assert_eq!(yubikey_recipient_tag(YUBIKEY)?, "piv-p256 K0qlLg");
+        Ok(())
+    }
+
+    #[test]
+    fn matches_unchanged_yubikey_recipients() -> Result<()> {
+        let file = yubikey_encrypted_file()?;
+        let public_keys: Vec<String> = [YUBIKEY].map(String::from).to_vec();
+        assert!(encrypted_to_recipients(file.path(), &public_keys)?);
+        Ok(())
+    }
+
+    #[test]
+    fn detects_changed_yubikey_recipients() -> Result<()> {
+        let file = yubikey_encrypted_file()?;
+
+        // Additional X25519 recipient
+        let public_keys: Vec<String> = [YUBIKEY, X25519].map(String::from).to_vec();
+        assert!(!encrypted_to_recipients(file.path(), &public_keys)?);
+
+        // YubiKey recipient replaced by an SSH recipient
+        let public_keys: Vec<String> = [SSH_ED25519].map(String::from).to_vec();
+        assert!(!encrypted_to_recipients(file.path(), &public_keys)?);
+
+        // File not encrypted to the YubiKey recipient
+        let public_keys: Vec<String> = [X25519, SSH_ED25519, SSH_RSA, YUBIKEY]
+            .map(String::from)
+            .to_vec();
+        assert!(!encrypted_to_recipients(example_file(), &public_keys)?);
+
+        Ok(())
+    }
+
+    #[test]
+    fn never_matches_other_plugin_recipients() -> Result<()> {
+        let public_keys: Vec<String> = [X25519, SSH_ED25519, SSH_RSA, FAKE_PLUGIN]
+            .map(String::from)
+            .to_vec();
+        assert!(!encrypted_to_recipients(example_file(), &public_keys)?);
+        Ok(())
+    }
+
+    #[test]
+    fn never_matches_non_age_files() -> Result<()> {
+        let rules_file = concat!(env!("CARGO_MANIFEST_DIR"), "/example/secrets.nix");
+        let public_keys: Vec<String> = [X25519].map(String::from).to_vec();
+        assert!(!encrypted_to_recipients(rules_file, &public_keys)?);
+        Ok(())
+    }
 }

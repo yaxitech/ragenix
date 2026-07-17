@@ -269,6 +269,130 @@ fn rekeying_works() -> Result<()> {
 
 #[test]
 #[cfg_attr(not(feature = "recursive-nix"), ignore)]
+fn rekeying_lazy_skips_unchanged() -> Result<()> {
+    let (_dir, path) = copy_example_to_tmpdir()?;
+
+    let files = &["github-runner.token.age", "root.passwd.age"];
+
+    // Ensure the files are encrypted to the recipients of the current rules
+    let mut cmd = Command::cargo_bin(crate_name!())?;
+    cmd.current_dir(&path)
+        .arg("--rekey")
+        .arg("--identity")
+        .arg("keys/id_ed25519")
+        .assert()
+        .success();
+
+    let contents_before = files
+        .iter()
+        .map(|f| fs::read(path.join(f)))
+        .collect::<Result<Vec<_>, _>>()?;
+
+    let expected = files
+        .iter()
+        .map(|s| path.join(s))
+        .map(|p| format!("Recipients unchanged, skipping: {}", p.display()))
+        .collect::<Vec<String>>()
+        .join("\n")
+        + "\n";
+
+    let mut cmd = Command::cargo_bin(crate_name!())?;
+    let assert = cmd
+        .current_dir(&path)
+        .arg("--rekey")
+        .arg("--lazy")
+        .arg("--identity")
+        .arg("keys/id_ed25519")
+        .assert();
+
+    assert.success().stdout(expected);
+
+    // Skipped files remain untouched
+    for (file, before) in files.iter().zip(contents_before) {
+        assert_eq!(fs::read(path.join(file))?, before);
+    }
+
+    Ok(())
+}
+
+#[test]
+#[cfg_attr(not(feature = "recursive-nix"), ignore)]
+fn rekeying_lazy_rekeys_changed_recipients() -> Result<()> {
+    let (_dir, path) = copy_example_to_tmpdir()?;
+
+    // Ensure the files are encrypted to the recipients of the current rules
+    let mut cmd = Command::cargo_bin(crate_name!())?;
+    cmd.current_dir(&path)
+        .arg("--rekey")
+        .arg("--identity")
+        .arg("keys/id_ed25519")
+        .assert()
+        .success();
+
+    // Drop the ssh-rsa recipient of root.passwd.age from the rules
+    let rules = indoc! {r#"
+    let
+      age = "age1wl3fqfvyml0c5eaj00j0frad4vhspgx9t8sngq4342j7rzjw4pqs80euxk";
+      sshEd25519 = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILoPdkEfhcsmW6Lg86GMrEJZnYfFBb7fL9G/IXK7pDQd";
+      sshRsa = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDHd3yBYhZbBkMqycy/SOgx9d79TV5Q76czfkmKUKVzywUJbJCwZ4wMA+ff7QzBufZRoAWpGeQb+rssLQEOwR+VX30Fw7K92W4kK6BCF5phP6AUCo07e3vjGqKvgJ4+8LYvcCB17bYf8pJhb4GoOGLrlJNKbGZOhfYE0eGFu/fWsVybQasC2naieKfqHOwS9kNK0N1gSnWh0qu3Du9vBAbQBEE13mPGe4zEdIzTogM068xgKhfJUWqu1xCyVBVJNdz9Xw0NLaWQJon8YXDe62ifxLj3LgndwKm91cN9mmL0klcGB5O8K2mPE0ZGFMDuxdcllUchQgYXdNxEWB4EvpkvpQbiO+fjgMpHeEEiNPd/v06amSBqK+QlIGEkPAElELphPLiTJmHVqxc5NaffVc7F+zM+c3+aWB5Fqgk1jcnqm8HmlLEvPPT1S00c80SkY1V3lUUOirFlciP/pEivJejA5Yj2i1NEEELnrCdBw/xQ4jfesIxcqmBhxk5dWeBbfGs=";
+    in
+    {
+      "root.passwd.age".publicKeys = [ age sshEd25519 ];
+      "github-runner.token.age".publicKeys = [ age sshEd25519 sshRsa ];
+    }
+    "#};
+    fs::write(path.join("secrets.nix"), rules)?;
+
+    let expected = format!(
+        "Recipients unchanged, skipping: {}\nRekeying {}\n",
+        path.join("github-runner.token.age").display(),
+        path.join("root.passwd.age").display()
+    );
+
+    let mut cmd = Command::cargo_bin(crate_name!())?;
+    let assert = cmd
+        .current_dir(&path)
+        .arg("--rekey")
+        .arg("--lazy")
+        .arg("--identity")
+        .arg("keys/id_ed25519")
+        .assert();
+
+    assert.success().stdout(expected);
+
+    // A second lazy rekey skips both files
+    let mut cmd = Command::cargo_bin(crate_name!())?;
+    let assert = cmd
+        .current_dir(&path)
+        .arg("--rekey")
+        .arg("--lazy")
+        .arg("--identity")
+        .arg("keys/id_ed25519")
+        .assert();
+
+    assert
+        .success()
+        .stdout(predicate::str::contains("Rekeying").not());
+
+    Ok(())
+}
+
+#[test]
+fn lazy_requires_rekey() -> Result<()> {
+    let mut cmd = Command::cargo_bin(crate_name!())?;
+    let assert = cmd
+        .arg("--edit")
+        .arg("some-file.age")
+        .arg("--lazy")
+        .assert();
+
+    assert.failure().stderr(predicate::str::contains("--rekey"));
+
+    Ok(())
+}
+
+#[test]
+#[cfg_attr(not(feature = "recursive-nix"), ignore)]
 fn rekeying_ignores_not_existing_files() -> Result<()> {
     let (_dir, path) = copy_example_to_tmpdir()?;
 

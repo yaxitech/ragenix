@@ -42,7 +42,7 @@ fn main() -> Result<()> {
             let editor = &opts.editor.unwrap();
             ragenix::edit(&rule, &identities, editor, &mut std::io::stdout())?;
         } else if opts.rekey {
-            ragenix::rekey(&rules, &identities, &mut std::io::stdout())?;
+            ragenix::rekey(&rules, &identities, opts.lazy, &mut std::io::stdout())?;
         }
     }
 
